@@ -45,3 +45,6 @@ htmlcov/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Sentinel Data Lake job configs
+*.job.yaml
