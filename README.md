@@ -6,7 +6,7 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 
 ## Features
 
-- **Realistic security event generation** — Windows SecurityEvent (4624, 4625, 4648, 4672, 4688, 4720, 4726), with Syslog, SigninLogs, and CommonSecurityLog schemas ready for extension
+- **Realistic security event generation** — Windows SecurityEvent (4624, 4625, 4648, 4672, 4688, 4720, 4726) and CommonSecurityLog (CEF format with firewall, IDS, malware, threat intel events)
 - **Scenario-driven** — configure brute-force attacks, privilege escalation, anomalous sign-ins, and more via YAML
 - **Multiple output targets** — send to Azure Log Analytics (`log_analytics`), write to local file (`file` — JSON/CSV), or print to console (`stdout`)
 - **Azure-native ingestion** — uses `DefaultAzureCredential` and `LogsIngestionClient` with automatic retry on HTTP 429
@@ -148,7 +148,9 @@ python -m sentinel_data_generator --output file
 ```
 Sentinel-Data-Generator/
 ├── .github/
-│   └── copilot-instructions.md     # AI agent coding guidelines
+│   ├── copilot-instructions.md     # AI agent coding guidelines
+│   └── workflows/
+│       └── generate-data.yml       # GitHub Actions workflow
 ├── .vscode/
 │   └── extensions.json             # Recommended VS Code extensions
 ├── infra/
@@ -168,7 +170,8 @@ Sentinel-Data-Generator/
 │   ├── generators/
 │   │   ├── __init__.py
 │   │   ├── base.py                # BaseGenerator ABC
-│   │   └── security_event.py      # Windows SecurityEvent generator
+│   │   ├── security_event.py      # Windows SecurityEvent generator
+│   │   └── common_security_log.py # CEF CommonSecurityLog generator
 │   ├── models/
 │   │   ├── __init__.py
 │   │   └── schemas.py             # Pydantic v2 models (4 log types)
@@ -189,7 +192,9 @@ Sentinel-Data-Generator/
 │   └── test_schemas.py            # Pydantic schema validation tests
 ├── .env.example                   # Environment variable template
 ├── .gitignore
+├── .dockerignore                  # Docker build exclusions
 ├── CONTRIBUTING.md
+├── Dockerfile                     # Container image definition
 ├── LICENSE                        # MIT License
 ├── README.md
 ├── pyproject.toml                 # PEP 621 project metadata
@@ -246,7 +251,7 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | `generation` | `time_range.end` | ISO 8601 UTC end datetime |
 | `generation` | `seed` | Random seed for reproducibility |
 | `scenarios[]` | `name` | Scenario identifier |
-| `scenarios[]` | `log_type` | Generator type: `security_event` |
+| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native` |
 | `scenarios[]` | `stream_name` | Override stream for this scenario |
 | `scenarios[]` | `count` | Override event count for this scenario |
 | `scenarios[]` | `parameters` | Generator-specific parameters |
@@ -261,12 +266,12 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 
 ## Supported Log Types
 
-| Log Type | Generator | Custom Table | Status |
+| Log Type | Generator | Target Table | Status |
 |----------|-----------|--------------|--------|
-| SecurityEvent | `security_event` | `SecurityEventDemo_CL` | ✅ Implemented |
-| SigninLogs | `signin_logs` | `SigninLogDemo_CL` | 📋 Schema ready |
-| Syslog | `syslog` | `SyslogDemo_CL` | 📋 Schema ready |
-| CommonSecurityLog | `common_security_log` | `CommonSecurityLogDemo_CL` | 📋 Schema ready |
+| SecurityEvent | `security_event` | `SecurityEventDemo_CL` (custom) | ✅ Implemented |
+| CommonSecurityLog | `common_security_log_native` | `CommonSecurityLog` (native) | ✅ Implemented |
+| SigninLogs | `signin_logs` | `SigninLogDemo_CL` (custom) | 📋 Schema ready |
+| Syslog | `syslog` | `SyslogDemo_CL` (custom) | 📋 Schema ready |
 
 ### SecurityEvent Generator
 
@@ -290,6 +295,87 @@ Generates realistic Windows Security events with the following supported Event I
 | `target_account` | `string` | Target account name (optional) |
 | `source_ip` | `string` | Attacker source IP (optional) |
 | `event_ids` | `list[int]` | Event IDs to generate — weighted by frequency in list |
+
+### CommonSecurityLog Generator
+
+Generates CEF-format events that ingest to the **native CommonSecurityLog table** in Sentinel. Supports multiple security vendors:
+
+| Vendor | Product | Event Types |
+|--------|---------|-------------|
+| Palo Alto Networks | PAN-OS | Firewall allow/deny, IDS, malware |
+| Fortinet | FortiGate | Firewall allow/deny, threat intel |
+| Cisco | ASA | Firewall allow/deny, VPN |
+| Check Point | NGFW | Firewall allow/deny, IDS |
+| Zscaler | ZIA | Web access, threat intel |
+
+**Event types:**
+
+| Event Type | DeviceEventClassID | Description |
+|------------|-------------------|-------------|
+| `firewall_allow` | `traffic:allow` | Permitted network traffic |
+| `firewall_deny` | `traffic:deny` | Blocked network traffic |
+| `ids_alert` | `intrusion:alert` | Intrusion detection alert |
+| `malware_detected` | `malware:detected` | Malware detection event |
+| `web_access` | `web:access` | Web proxy/gateway access |
+| `vpn_connection` | `vpn:connect` | VPN connection event |
+| `threat_intelligence` | `threat:match` | Threat intel IOC match |
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `vendor` | `string` | Specific vendor to use (optional — randomized if omitted) |
+| `event_type` | `string` | Specific event type (optional — randomized if omitted) |
+| `threat_actor_ip` | `bool` | Use known threat actor IPs for source (default: false) |
+
+## Docker
+
+Build and run the generator in a container:
+
+```bash
+# Build the image
+docker build -t sentinel-datagen .
+
+# Run with Azure authentication (send to Sentinel)
+docker run --rm \
+  -e AZURE_CLIENT_ID=<sp-client-id> \
+  -e AZURE_CLIENT_SECRET=<sp-secret> \
+  -e AZURE_TENANT_ID=<tenant-id> \
+  -e SENTINEL_DCE_ENDPOINT=<dce-endpoint> \
+  -e SENTINEL_DCR_ID=<dcr-id> \
+  sentinel-datagen --output log_analytics --count 100
+
+# Preview events locally
+docker run --rm sentinel-datagen --output stdout --count 10
+```
+
+## GitHub Actions
+
+The project includes a GitHub Actions workflow (`.github/workflows/generate-data.yml`) that:
+
+1. **Scheduled execution** — runs every 6 hours to continuously populate Sentinel with demo data
+2. **Manual trigger** — run on-demand from the GitHub Actions UI with customizable parameters
+3. **Docker build** — optionally build and push the container image to GitHub Container Registry
+
+### Required Secrets
+
+Configure these secrets in your GitHub repository (Settings → Secrets → Actions):
+
+| Secret | Description |
+|--------|-------------|
+| `AZURE_CLIENT_ID` | Service principal application (client) ID |
+| `AZURE_CLIENT_SECRET` | Service principal secret |
+| `AZURE_TENANT_ID` | Azure AD tenant ID |
+| `SENTINEL_DCE_ENDPOINT` | Data Collection Endpoint URL |
+| `SENTINEL_DCR_ID` | Data Collection Rule immutable ID |
+
+### Manual Trigger Options
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `count` | Events per scenario | 50 |
+| `log_level` | DEBUG, INFO, WARNING, ERROR | INFO |
+| `build_docker` | Build and push Docker image | false |
 
 ## Testing
 
