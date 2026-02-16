@@ -51,6 +51,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set up config
+        run: cp config/config.example.yaml config/config.yaml
+
       - name: Generate and send data to Sentinel
         env:
           # Azure authentication (Service Principal)
