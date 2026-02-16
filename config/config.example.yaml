@@ -1,0 +1,55 @@
+# Sentinel Data Generator - Example Configuration
+# Copy this file to config/config.yaml and fill in your values.
+# NEVER commit config.yaml with real credentials.
+
+# Azure Log Analytics / Data Collection settings
+# These can also be set via environment variables:
+#   SENTINEL_DCE_ENDPOINT, SENTINEL_DCR_ID, SENTINEL_STREAM_NAME
+azure:
+  dce_endpoint: "https://<your-dce>.ingest.monitor.azure.com"
+  dcr_id: "dcr-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  stream_name: "Custom-MyTable_CL"
+
+# Output target: log_analytics | file | stdout
+output:
+  type: stdout
+  # For file output:
+  # file_path: output/events.json
+  # file_format: json  # json or csv
+
+# Global generation settings
+generation:
+  count: 100            # Number of events per scenario
+  time_range:
+    start: "2026-02-15T00:00:00Z"
+    end: "2026-02-16T00:00:00Z"
+  seed: null            # Optional random seed for reproducibility
+
+# Scenarios to simulate
+scenarios:
+  - name: brute_force_login
+    log_type: security_event
+    description: "Simulate brute-force login attempts against a Windows server"
+    parameters:
+      target_host: "DC01.contoso.com"
+      target_account: "admin"
+      source_ip: "203.0.113.50"
+      event_ids: [4625, 4625, 4625, 4625, 4624]  # 4 failures then success
+      count: 50
+
+  - name: suspicious_signin
+    log_type: signin_logs
+    description: "Simulate suspicious Azure AD sign-ins from unusual locations"
+    parameters:
+      user: "john.doe@contoso.com"
+      locations: ["US", "RU", "CN"]
+      apps: ["Azure Portal", "Microsoft Teams"]
+      count: 20
+
+  - name: firewall_traffic
+    log_type: common_security_log
+    description: "Simulate firewall deny events for port scanning"
+    parameters:
+      source_ip: "198.51.100.10"
+      destination_ports: [22, 23, 80, 443, 3389, 8080]
+      count: 30
