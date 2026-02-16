@@ -392,16 +392,26 @@ Pre-built Sentinel content is included for immediate use with the generated demo
 
 ### Analysis Notebook
 
-A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tables directly in Sentinel compute:
+A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tables directly in the **Microsoft Sentinel Data Lake**. Built following the [official documentation](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebooks) using the `MicrosoftSentinelProvider` class, PySpark DataFrames, and `matplotlib`.
 
-- **Overview** — Event distribution across all tables
-- **SecurityEventDemo_CL** — Failed login analysis, brute force detection
+- **Setup** — Initializes `MicrosoftSentinelProvider(spark)` and lists available workspaces
+- **Overview** — Event distribution across all tables (pie chart)
+- **SecurityEventDemo_CL** — Events by Event ID, failed login analysis, brute force detection
 - **CommonSecurityLog** — Vendor breakdown, threat intelligence matches, firewall denies
-- **SigninLogDemo_CL** — Sign-in results, risky sign-ins by location
-- **SyslogDemo_CL** — SSH failures, service errors by severity
-- **Dashboard** — Combined visualization summary
+- **SigninLogDemo_CL** — Sign-in results, risky sign-ins, success/failure by location
+- **SyslogDemo_CL** — Facility/severity breakdown, SSH failures, service errors
+- **Dashboard** — Combined 2×2 visualization summary
+- **Key Findings** — Automated security summary with counts
 
-**To use:** Upload to Microsoft Sentinel Notebooks and run with compute enabled.
+**To use:**
+
+1. Install the [Microsoft Sentinel VS Code extension](https://marketplace.visualstudio.com/items?itemName=ms-azure-sentinel.azure-sentinel-notebooks)
+2. Open the notebook in VS Code
+3. Run the first cell — select **Microsoft Sentinel** as the runtime
+4. Choose a pool size (Small is sufficient for ~3k events)
+5. Wait 3–5 minutes for the Spark session to start, then run remaining cells
+
+> **Note:** Custom pip installs are not supported in the Sentinel runtime. The notebook uses only `matplotlib` (pre-installed in Azure Synapse) and the `sentinel_lake` provider library.
 
 ### Workbook
 
