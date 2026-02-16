@@ -53,17 +53,6 @@ scenarios:
       target_account: "svc_backup"
       event_ids: [4720, 4672, 4624]
 
-  # Example: future signin_logs scenario (generator not yet implemented)
-  # - name: suspicious_signin
-  #   log_type: signin_logs
-  #   stream_name: "Custom-SigninLogDemo_CL"
-  #   description: "Simulate suspicious Azure AD sign-ins from unusual locations"
-  #   count: 20
-  #   parameters:
-  #     user: "john.doe@contoso.com"
-  #     locations: ["US", "RU", "CN"]
-  #     apps: ["Azure Portal", "Microsoft Teams"]
-
   # CommonSecurityLog scenarios - ingest to NATIVE CommonSecurityLog table
   - name: firewall_traffic
     log_type: common_security_log_native
@@ -90,3 +79,58 @@ scenarios:
     parameters:
       event_type: "threat_intelligence"
       threat_actor_ip: true
+
+  # SigninLogs scenarios - ingest to custom SigninLogDemo_CL table
+  # (Native SigninLogs table is protected - only Entra ID can write to it)
+  - name: suspicious_signins
+    log_type: signin_logs
+    stream_name: "Custom-SigninLogDemo_CL"
+    description: "Simulate suspicious Azure AD sign-ins from risky locations"
+    count: 50
+    parameters:
+      risky_locations: true
+      failure_rate: 0.3
+
+  - name: brute_force_aad
+    log_type: signin_logs
+    stream_name: "Custom-SigninLogDemo_CL"
+    description: "Simulate brute-force attacks against Azure AD accounts"
+    count: 30
+    parameters:
+      target_user: "admin@contoso.com"
+      attack_type: "brute_force"
+
+  - name: credential_stuffing
+    log_type: signin_logs
+    stream_name: "Custom-SigninLogDemo_CL"
+    description: "Simulate credential stuffing attack (many users, same password)"
+    count: 40
+    parameters:
+      attack_type: "credential_stuffing"
+
+  # Syslog scenarios - ingest to custom SyslogDemo_CL table
+  # (Native Syslog table requires specific agent-based ingestion)
+  - name: ssh_brute_force
+    log_type: syslog
+    stream_name: "Custom-SyslogDemo_CL"
+    description: "Simulate SSH brute-force attacks against Linux servers"
+    count: 80
+    parameters:
+      event_type: "ssh_failure"
+      attacker_ip: "203.0.113.100"
+
+  - name: linux_auth_events
+    log_type: syslog
+    stream_name: "Custom-SyslogDemo_CL"
+    description: "Simulate mixed Linux authentication events"
+    count: 50
+    parameters:
+      event_type: "sudo_success"
+
+  - name: service_anomalies
+    log_type: syslog
+    stream_name: "Custom-SyslogDemo_CL"
+    description: "Simulate service start/stop and failure events"
+    count: 30
+    parameters:
+      event_type: "service_failure"

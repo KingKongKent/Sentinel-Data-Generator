@@ -42,8 +42,9 @@ var signinLogStream = 'Custom-${signinLogTable}'
 var syslogStream = 'Custom-${syslogTable}'
 var commonSecurityLogStream = 'Custom-${commonSecurityLogTable}'
 
-// Native table stream for live CommonSecurityLog
+// Native table streams for live tables
 var commonSecurityLogNativeStream = 'Custom-CommonSecurityLogNative'
+var syslogNativeStream = 'Custom-SyslogNative'
 
 // ============================================================================
 // Data Collection Endpoint
@@ -260,6 +261,18 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
           { name: 'RequestURL', type: 'string' }
         ]
       }
+      // Stream for native Syslog table
+      '${syslogNativeStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'Computer', type: 'string' }
+          { name: 'HostIP', type: 'string' }
+          { name: 'Facility', type: 'string' }
+          { name: 'SeverityLevel', type: 'string' }
+          { name: 'ProcessName', type: 'string' }
+          { name: 'SyslogMessage', type: 'string' }
+        ]
+      }
     }
     destinations: {
       logAnalytics: [
@@ -300,6 +313,12 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
         transformKql: 'source'
         outputStream: 'Microsoft-CommonSecurityLog'
       }
+      {
+        streams: [ syslogNativeStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: 'Microsoft-Syslog'
+      }
     ]
   }
 }
@@ -334,3 +353,6 @@ output commonSecurityLogStreamName string = commonSecurityLogStream
 
 @description('Stream name for native CommonSecurityLog table.')
 output commonSecurityLogNativeStreamName string = commonSecurityLogNativeStream
+
+@description('Stream name for native Syslog table.')
+output syslogNativeStreamName string = syslogNativeStream

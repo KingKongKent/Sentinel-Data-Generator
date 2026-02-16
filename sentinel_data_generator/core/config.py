@@ -90,7 +90,9 @@ class AppConfig(BaseModel):
 LOG_TYPE_STREAM_MAP: dict[str, str] = {
     "security_event": "Custom-SecurityEventDemo_CL",
     "signin_logs": "Custom-SigninLogDemo_CL",
+    "signin_logs_native": "Custom-SigninLogsNative",
     "syslog": "Custom-SyslogDemo_CL",
+    "syslog_native": "Custom-SyslogNative",
     "common_security_log": "Custom-CommonSecurityLogDemo_CL",
     "common_security_log_native": "Custom-CommonSecurityLogNative",
 }

@@ -14,6 +14,8 @@ from sentinel_data_generator.core.config import (
 from sentinel_data_generator.generators.base import BaseGenerator
 from sentinel_data_generator.generators.common_security_log import CommonSecurityLogGenerator
 from sentinel_data_generator.generators.security_event import SecurityEventGenerator
+from sentinel_data_generator.generators.signin_logs import SigninLogsGenerator
+from sentinel_data_generator.generators.syslog import SyslogGenerator
 from sentinel_data_generator.outputs.base import BaseOutput
 from sentinel_data_generator.outputs.file import FileOutput
 from sentinel_data_generator.outputs.log_analytics import LogAnalyticsOutput
@@ -27,9 +29,10 @@ GENERATOR_REGISTRY: dict[str, type[BaseGenerator]] = {
     "security_event": SecurityEventGenerator,
     "common_security_log": CommonSecurityLogGenerator,
     "common_security_log_native": CommonSecurityLogGenerator,
-    # TODO: Add more generators as they are implemented
-    # "signin_logs": SigninLogGenerator,
-    # "syslog": SyslogGenerator,
+    "signin_logs": SigninLogsGenerator,
+    "signin_logs_native": SigninLogsGenerator,
+    "syslog": SyslogGenerator,
+    "syslog_native": SyslogGenerator,
 }
 
 
