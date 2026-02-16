@@ -167,6 +167,8 @@ Sentinel-Data-Generator/
 │   └── analytic-rules.json         # 11 Sentinel detection rules
 ├── config/
 │   └── config.example.yaml         # Example YAML configuration
+├── notebooks/
+│   └── sentinel_analysis.ipynb     # Sentinel compute analysis notebook
 ├── sentinel_data_generator/
 │   ├── __init__.py                 # Package init, version
 │   ├── __main__.py                 # CLI entry point (argparse)
@@ -387,6 +389,19 @@ Generates Linux syslog events for the `SyslogDemo_CL` custom table. Supports mul
 ## Sentinel Content
 
 Pre-built Sentinel content is included for immediate use with the generated demo data.
+
+### Analysis Notebook
+
+A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tables directly in Sentinel compute:
+
+- **Overview** — Event distribution across all tables
+- **SecurityEventDemo_CL** — Failed login analysis, brute force detection
+- **CommonSecurityLog** — Vendor breakdown, threat intelligence matches, firewall denies
+- **SigninLogDemo_CL** — Sign-in results, risky sign-ins by location
+- **SyslogDemo_CL** — SSH failures, service errors by severity
+- **Dashboard** — Combined visualization summary
+
+**To use:** Upload to Microsoft Sentinel Notebooks and run with compute enabled.
 
 ### Workbook
 
