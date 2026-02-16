@@ -6,13 +6,18 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 
 ## Features
 
-- **Realistic security event generation** — Windows SecurityEvent (4624, 4625, 4648, 4672, 4688, 4720, 4726) and CommonSecurityLog (CEF format with firewall, IDS, malware, threat intel events)
+- **Realistic security event generation** — 4 log types with 11 scenarios:
+  - **Windows SecurityEvent** — brute-force attacks, privilege escalation (Event IDs 4624, 4625, 4648, 4672, 4688, 4720, 4726)
+  - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler
+  - **SigninLogs** — Azure AD/Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
+  - **Syslog** — Linux system events with SSH authentication, sudo abuse, service failures
 - **Scenario-driven** — configure brute-force attacks, privilege escalation, anomalous sign-ins, and more via YAML
 - **Multiple output targets** — send to Azure Log Analytics (`log_analytics`), write to local file (`file` — JSON/CSV), or print to console (`stdout`)
 - **Azure-native ingestion** — uses `DefaultAzureCredential` and `LogsIngestionClient` with automatic retry on HTTP 429
 - **Pydantic v2 validation** — all generated events are validated against strict schemas before output
 - **Configurable** — control event count, time range, random seed, and per-scenario parameters
-- **Infrastructure-as-Code** — includes a Bicep template to deploy the DCE, DCR, and custom Log Analytics tables
+- **Infrastructure-as-Code** — includes Bicep templates to deploy DCE, DCR, custom tables, workbook, and analytic rules
+- **Sentinel content included** — pre-built workbook with 5 visualization tabs and 11 detection rules
 - **Extensible** — add new log types by subclassing `BaseGenerator` and registering in the engine
 
 ## Prerequisites
@@ -157,7 +162,9 @@ Sentinel-Data-Generator/
 │   ├── main.bicep                  # DCE + DCR + custom tables (Bicep)
 │   ├── main.bicepparam             # Deployment parameters
 │   ├── deploy.ps1                  # PowerShell deployment script
-│   └── deploy.sh                   # Bash deployment script
+│   ├── deploy.sh                   # Bash deployment script
+│   ├── workbook.json               # Sentinel workbook (5 tabs)
+│   └── analytic-rules.json         # 11 Sentinel detection rules
 ├── config/
 │   └── config.example.yaml         # Example YAML configuration
 ├── sentinel_data_generator/
@@ -171,7 +178,9 @@ Sentinel-Data-Generator/
 │   │   ├── __init__.py
 │   │   ├── base.py                # BaseGenerator ABC
 │   │   ├── security_event.py      # Windows SecurityEvent generator
-│   │   └── common_security_log.py # CEF CommonSecurityLog generator
+│   │   ├── common_security_log.py # CEF CommonSecurityLog generator
+│   │   ├── signin_logs.py         # Azure AD/Entra ID SigninLogs generator
+│   │   └── syslog.py              # Linux Syslog generator
 │   ├── models/
 │   │   ├── __init__.py
 │   │   └── schemas.py             # Pydantic v2 models (4 log types)
@@ -251,7 +260,7 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | `generation` | `time_range.end` | ISO 8601 UTC end datetime |
 | `generation` | `seed` | Random seed for reproducibility |
 | `scenarios[]` | `name` | Scenario identifier |
-| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native` |
+| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native`, `signin_logs`, `syslog` |
 | `scenarios[]` | `stream_name` | Override stream for this scenario |
 | `scenarios[]` | `count` | Override event count for this scenario |
 | `scenarios[]` | `parameters` | Generator-specific parameters |
@@ -270,8 +279,8 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 |----------|-----------|--------------|--------|
 | SecurityEvent | `security_event` | `SecurityEventDemo_CL` (custom) | ✅ Implemented |
 | CommonSecurityLog | `common_security_log_native` | `CommonSecurityLog` (native) | ✅ Implemented |
-| SigninLogs | `signin_logs` | `SigninLogDemo_CL` (custom) | 📋 Schema ready |
-| Syslog | `syslog` | `SyslogDemo_CL` (custom) | 📋 Schema ready |
+| SigninLogs | `signin_logs` | `SigninLogDemo_CL` (custom) | ✅ Implemented |
+| Syslog | `syslog` | `SyslogDemo_CL` (custom) | ✅ Implemented |
 
 ### SecurityEvent Generator
 
@@ -327,6 +336,105 @@ Generates CEF-format events that ingest to the **native CommonSecurityLog table*
 | `vendor` | `string` | Specific vendor to use (optional — randomized if omitted) |
 | `event_type` | `string` | Specific event type (optional — randomized if omitted) |
 | `threat_actor_ip` | `bool` | Use known threat actor IPs for source (default: false) |
+
+### SigninLogs Generator
+
+Generates Azure AD/Entra ID sign-in events for the `SigninLogDemo_CL` custom table. Supports multiple attack scenarios:
+
+| Attack Type | Description |
+|-------------|-------------|
+| `brute_force` | Multiple failed logins from same IP against one user |
+| `credential_stuffing` | Failed logins across multiple users from one IP |
+| `impossible_travel` | Sign-ins from distant locations in short time |
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `attack_type` | `string` | Attack scenario: `brute_force`, `credential_stuffing`, `impossible_travel` |
+| `target_user` | `string` | Specific target UPN (optional — randomized if omitted) |
+| `source_ip` | `string` | Attacker source IP (optional — randomized if omitted) |
+| `success_rate` | `float` | Probability of successful sign-in (0.0-1.0, default: 0.1) |
+
+**Generated fields include:** `TimeGenerated`, `UserPrincipalName`, `IPAddress`, `Location`, `ResultType`, `ResultDescription`, `AppDisplayName`, `ClientAppUsed`, `DeviceDetail`, `RiskLevelDuringSignIn`, `RiskState`.
+
+### Syslog Generator
+
+Generates Linux syslog events for the `SyslogDemo_CL` custom table. Supports multiple event categories:
+
+| Event Category | Facility | Description |
+|----------------|----------|-------------|
+| SSH authentication | `auth` | SSH login success/failure, key auth, password auth |
+| Sudo events | `authpriv` | sudo command execution, permission denied |
+| Cron jobs | `cron` | Scheduled task execution |
+| Kernel events | `kern` | Out-of-memory, hardware errors |
+| Service events | `daemon` | Service start/stop/failure |
+| Firewall events | `kern` | iptables allow/deny |
+
+**Severity levels:** `emerg`, `alert`, `crit`, `err`, `warning`, `notice`, `info`, `debug`
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `event_category` | `string` | Category: `ssh`, `sudo`, `cron`, `kernel`, `service`, `firewall` |
+| `severity` | `string` | Minimum severity level (optional) |
+| `hostname` | `string` | Specific hostname (optional — randomized if omitted) |
+| `failure_rate` | `float` | Probability of failure events (0.0-1.0, default: 0.3) |
+
+**Generated fields include:** `TimeGenerated`, `Facility`, `SeverityLevel`, `Computer`, `HostIP`, `ProcessName`, `ProcessID`, `SyslogMessage`.
+
+## Sentinel Content
+
+Pre-built Sentinel content is included for immediate use with the generated demo data.
+
+### Workbook
+
+The workbook (`infra/workbook.json`) provides 5 visualization tabs:
+
+| Tab | Visualizations |
+|-----|---------------|
+| **Overview** | Event distribution pie chart, events over time timeline |
+| **Security Events** | Windows events by type, failed logins by host |
+| **CommonSecurityLog** | Firewall events by vendor, threat intel matches |
+| **Sign-in Logs** | Sign-in results by location, risky sign-ins |
+| **Syslog** | Events by facility and severity, SSH failures |
+
+**Deploy the workbook:**
+
+```bash
+az deployment group create \
+  --resource-group <your-resource-group> \
+  --template-file infra/workbook.json \
+  --parameters workspaceName=<your-workspace-name>
+```
+
+### Analytic Rules
+
+11 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
+
+| Rule | Log Type | Description |
+|------|----------|-------------|
+| Windows Brute Force Attack | SecurityEventDemo_CL | 10+ failed logins in 5 minutes |
+| Windows Privilege Escalation | SecurityEventDemo_CL | Admin account creation |
+| High Volume Firewall Denies | CommonSecurityLog | 50+ denies from same source |
+| IDS Intrusion Detected | CommonSecurityLog | Intrusion alert from IDS |
+| Threat Intel IOC Match | CommonSecurityLog | Known threat actor IP |
+| AAD Brute Force Attack | SigninLogDemo_CL | 10+ failed sign-ins in 5 minutes |
+| Credential Stuffing Attack | SigninLogDemo_CL | Failed logins across 5+ accounts |
+| Risky Sign-in Detected | SigninLogDemo_CL | High risk sign-in |
+| SSH Brute Force Attack | SyslogDemo_CL | 10+ SSH failures in 5 minutes |
+| Suspicious Sudo Activity | SyslogDemo_CL | Multiple sudo failures |
+| Critical Service Failure | SyslogDemo_CL | Service failure events |
+
+**Deploy the analytic rules:**
+
+```bash
+az deployment group create \
+  --resource-group <your-resource-group> \
+  --template-file infra/analytic-rules.json \
+  --parameters workspaceName=<your-workspace-name>
+```
 
 ## Docker
 
