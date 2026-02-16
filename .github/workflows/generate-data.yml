@@ -88,9 +88,13 @@ jobs:
           echo "| Log level | ${{ github.event.inputs.log_level || 'INFO' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Scenarios Executed" >> $GITHUB_STEP_SUMMARY
-          echo "- **SecurityEvent**: brute_force_login, privilege_escalation" >> $GITHUB_STEP_SUMMARY
-          echo "- **CommonSecurityLog**: firewall_traffic, ids_intrusion_detection, threat_intel_matches" >> $GITHUB_STEP_SUMMARY
+          echo "### Scenarios Executed (11 total)" >> $GITHUB_STEP_SUMMARY
+          echo "| Table | Scenarios |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **SecurityEventDemo_CL** | brute_force_login, privilege_escalation |" >> $GITHUB_STEP_SUMMARY
+          echo "| **CommonSecurityLog** (native) | firewall_traffic, ids_intrusion_detection, threat_intel_matches |" >> $GITHUB_STEP_SUMMARY
+          echo "| **SigninLogDemo_CL** | suspicious_signins, brute_force_aad, credential_stuffing |" >> $GITHUB_STEP_SUMMARY
+          echo "| **SyslogDemo_CL** | ssh_brute_force, linux_auth_events, service_anomalies |" >> $GITHUB_STEP_SUMMARY
 
   docker-build:
     name: Build Docker Image
