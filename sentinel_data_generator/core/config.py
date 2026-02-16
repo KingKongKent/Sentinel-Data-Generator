@@ -92,6 +92,7 @@ LOG_TYPE_STREAM_MAP: dict[str, str] = {
     "signin_logs": "Custom-SigninLogDemo_CL",
     "syslog": "Custom-SyslogDemo_CL",
     "common_security_log": "Custom-CommonSecurityLogDemo_CL",
+    "common_security_log_native": "Custom-CommonSecurityLogNative",
 }
 
 

@@ -61,7 +61,7 @@ class CommonSecurityLogEvent(BaseModel):
     DeviceVersion: str = Field(..., description="Version of the reporting device")
     DeviceEventClassID: str = Field(..., description="Event class identifier")
     Activity: str = Field(..., description="Human-readable event name")
-    LogSeverity: str = Field(..., description="Log severity (1-10 or Low/Medium/High)")
+    LogSeverity: str = Field(..., description="Log severity (1-10)")
     SourceIP: str = Field(..., description="Source IP address")
     DestinationIP: str = Field(..., description="Destination IP address")
     SourcePort: int | None = Field(None, description="Source port number")

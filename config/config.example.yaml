@@ -64,12 +64,29 @@ scenarios:
   #     locations: ["US", "RU", "CN"]
   #     apps: ["Azure Portal", "Microsoft Teams"]
 
-  # Example: future common_security_log scenario
-  # - name: firewall_traffic
-  #   log_type: common_security_log
-  #   stream_name: "Custom-CommonSecurityLogDemo_CL"
-  #   description: "Simulate firewall deny events for port scanning"
-  #   count: 30
-  #   parameters:
-  #     source_ip: "198.51.100.10"
-  #     destination_ports: [22, 23, 80, 443, 3389, 8080]
+  # CommonSecurityLog scenarios - ingest to NATIVE CommonSecurityLog table
+  - name: firewall_traffic
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate mixed firewall traffic (allow/deny)"
+    count: 100
+    parameters:
+      vendor: "Palo Alto Networks"
+
+  - name: ids_intrusion_detection
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate IDS alerts and intrusion attempts"
+    count: 30
+    parameters:
+      event_type: "ids_alert"
+      threat_actor_ip: true
+
+  - name: threat_intel_matches
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate threat intelligence IOC matches"
+    count: 20
+    parameters:
+      event_type: "threat_intelligence"
+      threat_actor_ip: true

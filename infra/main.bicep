@@ -42,6 +42,9 @@ var signinLogStream = 'Custom-${signinLogTable}'
 var syslogStream = 'Custom-${syslogTable}'
 var commonSecurityLogStream = 'Custom-${commonSecurityLogTable}'
 
+// Native table stream for live CommonSecurityLog
+var commonSecurityLogNativeStream = 'Custom-CommonSecurityLogNative'
+
 // ============================================================================
 // Data Collection Endpoint
 // ============================================================================
@@ -239,6 +242,24 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
           { name: 'RequestURL', type: 'string' }
         ]
       }
+      // Stream for native CommonSecurityLog table (CEF schema)
+      '${commonSecurityLogNativeStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'DeviceVendor', type: 'string' }
+          { name: 'DeviceProduct', type: 'string' }
+          { name: 'DeviceVersion', type: 'string' }
+          { name: 'DeviceEventClassID', type: 'string' }
+          { name: 'Activity', type: 'string' }
+          { name: 'LogSeverity', type: 'string' }
+          { name: 'SourceIP', type: 'string' }
+          { name: 'DestinationIP', type: 'string' }
+          { name: 'SourcePort', type: 'int' }
+          { name: 'DestinationPort', type: 'int' }
+          { name: 'Protocol', type: 'string' }
+          { name: 'RequestURL', type: 'string' }
+        ]
+      }
     }
     destinations: {
       logAnalytics: [
@@ -273,6 +294,12 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
         transformKql: 'source'
         outputStream: commonSecurityLogStream
       }
+      {
+        streams: [ commonSecurityLogNativeStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: 'Microsoft-CommonSecurityLog'
+      }
     ]
   }
 }
@@ -304,3 +331,6 @@ output syslogStreamName string = syslogStream
 
 @description('Stream name for CommonSecurityLog demo data.')
 output commonSecurityLogStreamName string = commonSecurityLogStream
+
+@description('Stream name for native CommonSecurityLog table.')
+output commonSecurityLogNativeStreamName string = commonSecurityLogNativeStream
