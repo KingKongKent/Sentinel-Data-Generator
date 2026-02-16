@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sentinel-data-generator"
-version = "0.1.0"
+version = "1.0.1"
 description = "Generate realistic demo log data for Microsoft Sentinel"
 readme = "README.md"
 license = {text = "MIT"}
