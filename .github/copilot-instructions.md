@@ -93,6 +93,53 @@ This is a **Python CLI tool** that generates realistic demo/test log data for **
 - Pin major versions in `requirements.txt`.
 - Keep dependencies minimal — justify any new dependency.
 
+### Sentinel Data Lake Notebooks
+Notebooks in `notebooks/` are designed to run on the **Microsoft Sentinel Data Lake** via the VS Code Microsoft Sentinel extension. They use **Apache Spark** (PySpark) — not `azure-monitor-query` or `msticpy`.
+
+#### Runtime Environment
+- Notebooks run in a **Sentinel compute runtime** (Small / Medium / Large pool) selected via the VS Code Sentinel extension.
+- The runtime provides a pre-configured `spark` (SparkSession) variable — **never create your own SparkSession**.
+- Only **Azure Synapse libraries 3.4** and the **`sentinel_lake` provider library** are available. `pip install` and custom libraries are **not supported**.
+- Available visualization library: `matplotlib`. Do **not** use `plotly`, `seaborn`, or other libraries that are not pre-installed.
+
+#### MicrosoftSentinelProvider API
+- Import: `from sentinel_lake.providers import MicrosoftSentinelProvider`
+- Initialize once per notebook: `data_provider = MicrosoftSentinelProvider(spark)`
+- Key methods:
+  - `data_provider.list_databases()` → `list[str]` of workspace names
+  - `data_provider.list_tables(database_name, database_id=None)` → `list[str]` of table names
+  - `data_provider.read_table(table_name, database_name=None, database_id=None)` → Spark `DataFrame`
+  - `data_provider.save_as_table(df, table_name, database_name=None, database_id=None, write_options=None)` → run ID
+  - `data_provider.delete_table(table_name, database_name=None, database_id=None)` → dict
+- When reading tables, always pass the **workspace name** as the second argument: `data_provider.read_table("SecurityEventDemo_CL", WORKSPACE_NAME)`
+
+#### Custom Table Naming
+- Data lake tier custom tables must end with `_SPRK` suffix.
+- Analytics tier custom tables must end with `_SPRK_CL` suffix.
+- `save_as_table` supports `append` (default) and `overwrite` modes. `overwrite` is only supported in the lake tier.
+- Partitioning (`partitionBy`) is only supported for custom tables in the `System tables` database in the lake tier.
+
+#### Code Patterns
+- Use **PySpark DataFrame API** (`col`, `count`, `when`, `desc`, `from_json`, etc.) for all data transformations — not Pandas.
+- Convert to Pandas only for visualization: `pd_df = spark_df.toPandas()`
+- Use `matplotlib.pyplot` for charts (bar, pie, line). Import as `import matplotlib.pyplot as plt`.
+- Define a `WORKSPACE_NAME` variable at the top of the notebook for the target workspace.
+- Structure notebooks in logical sections: Setup → Load Data → Analysis per table → Summary Dashboard.
+- Use `.show(truncate=False)` to display Spark DataFrames in output cells.
+
+#### Limitations & Considerations
+- Session startup takes **3–5 minutes**; subsequent cell runs are fast.
+- Interactive session timeout is **20 minutes** (configurable).
+- Interactive query timeout is **2 hours**.
+- Max **100,000 rows** displayed in VS Code output.
+- VS Code linting (Pylance/Ruff) will flag false errors for `spark`, `sentinel_lake`, and `pyspark` imports — these are expected since the packages only exist in the Sentinel runtime.
+- Analytics tier tables **cannot be deleted** from notebooks; use Log Analytics API instead.
+
+#### Reference Documentation
+- [Sentinel Data Lake Notebooks](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebooks)
+- [Sample Notebooks](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebook-examples)
+- [MicrosoftSentinelProvider Class Reference](https://learn.microsoft.com/en-us/azure/sentinel/datalake/sentinel-provider-class-reference)
+
 ## File Naming
 - Python modules: `snake_case.py`
 - Config files: `snake_case.yaml`
