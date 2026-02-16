@@ -4,11 +4,13 @@
 
 # Azure Log Analytics / Data Collection settings
 # These can also be set via environment variables:
-#   SENTINEL_DCE_ENDPOINT, SENTINEL_DCR_ID, SENTINEL_STREAM_NAME
+#   SENTINEL_DCE_ENDPOINT  → overrides azure.dce_endpoint
+#   SENTINEL_DCR_ID        → overrides azure.dcr_id
+#   SENTINEL_STREAM_NAME   → overrides azure.stream_name
 azure:
-  dce_endpoint: "https://<your-dce>.ingest.monitor.azure.com"
+  dce_endpoint: "https://<your-dce>.<region>.ingest.monitor.azure.com"
   dcr_id: "dcr-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  stream_name: "Custom-MyTable_CL"
+  stream_name: "Custom-SecurityEventDemo_CL"
 
 # Output target: log_analytics | file | stdout
 output:
@@ -19,37 +21,55 @@ output:
 
 # Global generation settings
 generation:
-  count: 100            # Number of events per scenario
+  count: 50             # Default number of events per scenario
   time_range:
-    start: "2026-02-15T00:00:00Z"
-    end: "2026-02-16T00:00:00Z"
+    start: "2025-06-15T00:00:00Z"
+    end: "2025-06-16T00:00:00Z"
   seed: null            # Optional random seed for reproducibility
 
 # Scenarios to simulate
+# Each scenario maps to a registered generator via log_type.
+# Supported log_type values: security_event
+# Coming soon: signin_logs, syslog, common_security_log
 scenarios:
   - name: brute_force_login
     log_type: security_event
+    stream_name: "Custom-SecurityEventDemo_CL"
     description: "Simulate brute-force login attempts against a Windows server"
+    count: 50
     parameters:
       target_host: "DC01.contoso.com"
       target_account: "admin"
       source_ip: "203.0.113.50"
-      event_ids: [4625, 4625, 4625, 4625, 4624]  # 4 failures then success
-      count: 50
+      event_ids: [4625, 4625, 4625, 4625, 4624]  # 4 failures then 1 success
 
-  - name: suspicious_signin
-    log_type: signin_logs
-    description: "Simulate suspicious Azure AD sign-ins from unusual locations"
+  - name: privilege_escalation
+    log_type: security_event
+    stream_name: "Custom-SecurityEventDemo_CL"
+    description: "Simulate privilege escalation — new account creation and special logon"
+    count: 20
     parameters:
-      user: "john.doe@contoso.com"
-      locations: ["US", "RU", "CN"]
-      apps: ["Azure Portal", "Microsoft Teams"]
-      count: 20
+      target_host: "DC02.contoso.com"
+      target_account: "svc_backup"
+      event_ids: [4720, 4672, 4624]
 
-  - name: firewall_traffic
-    log_type: common_security_log
-    description: "Simulate firewall deny events for port scanning"
-    parameters:
-      source_ip: "198.51.100.10"
-      destination_ports: [22, 23, 80, 443, 3389, 8080]
-      count: 30
+  # Example: future signin_logs scenario (generator not yet implemented)
+  # - name: suspicious_signin
+  #   log_type: signin_logs
+  #   stream_name: "Custom-SigninLogDemo_CL"
+  #   description: "Simulate suspicious Azure AD sign-ins from unusual locations"
+  #   count: 20
+  #   parameters:
+  #     user: "john.doe@contoso.com"
+  #     locations: ["US", "RU", "CN"]
+  #     apps: ["Azure Portal", "Microsoft Teams"]
+
+  # Example: future common_security_log scenario
+  # - name: firewall_traffic
+  #   log_type: common_security_log
+  #   stream_name: "Custom-CommonSecurityLogDemo_CL"
+  #   description: "Simulate firewall deny events for port scanning"
+  #   count: 30
+  #   parameters:
+  #     source_ip: "198.51.100.10"
+  #     destination_ports: [22, 23, 80, 443, 3389, 8080]

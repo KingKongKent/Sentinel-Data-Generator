@@ -15,6 +15,7 @@ cd Sentinel-Data-Generator
 
 ```bash
 python -m venv .venv
+
 # Windows
 .venv\Scripts\activate
 # macOS/Linux
@@ -27,7 +28,7 @@ pip install -r requirements-dev.txt
 ### 3. Verify Your Setup
 
 ```bash
-python -m pytest
+python -m pytest -v
 ruff check .
 ```
 
@@ -68,32 +69,94 @@ ruff check .
 
 ### Project Conventions
 - Generators go in `sentinel_data_generator/generators/` and must inherit from `BaseGenerator`.
+- New generators must be registered in `GENERATOR_REGISTRY` in `sentinel_data_generator/core/engine.py`.
 - Pydantic models for log schemas go in `sentinel_data_generator/models/schemas.py`.
-- Output adapters go in `sentinel_data_generator/outputs/`.
+- Output adapters go in `sentinel_data_generator/outputs/` and must inherit from `BaseOutput`.
+- Config loading and Pydantic config models are in `sentinel_data_generator/core/config.py`.
+- Custom exceptions go in `sentinel_data_generator/utils/exceptions.py`.
 - Config/scenario YAML files go in `config/`.
 - Tests mirror the source structure under `tests/` and are named `test_<module>.py`.
 
 ### Security
 - **Never** commit real credentials, tokens, or secrets.
-- Use obviously fake demo values (e.g., `user@contoso.com`, `10.0.0.x`).
+- Use obviously fake demo values (e.g., `user@contoso.com`, `203.0.113.x` documentation IPs).
 - Sensitive configuration must come from environment variables.
 
 ## Adding a New Log Type Generator
 
-1. Create a new module in `sentinel_data_generator/generators/` (e.g., `dns_logs.py`).
-2. Create a class that inherits from `BaseGenerator`.
-3. Implement the required `generate()` method.
-4. Add Pydantic schema models in `sentinel_data_generator/models/schemas.py`.
-5. Register the generator in the engine/config loader.
-6. Add corresponding tests in `tests/`.
-7. Update `README.md` with the new supported log type.
+1. **Add a Pydantic schema** in `sentinel_data_generator/models/schemas.py` with fields matching the DCR stream schema.
+2. **Create a generator module** in `sentinel_data_generator/generators/` (e.g., `syslog.py`).
+3. **Subclass `BaseGenerator`** and implement the `generate()` method:
+   - Accept `count` and `time_range` parameters.
+   - Use `self._distribute_timestamps()` for realistic time distribution.
+   - Use `self.scenario` dict for scenario-specific parameters.
+   - Validate events through the Pydantic model and return `list[dict]` via `model.model_dump(mode="json")`.
+4. **Register the generator** in `GENERATOR_REGISTRY` in `sentinel_data_generator/core/engine.py`:
+   ```python
+   from sentinel_data_generator.generators.syslog import SyslogGenerator
+   
+   GENERATOR_REGISTRY: dict[str, type[BaseGenerator]] = {
+       "security_event": SecurityEventGenerator,
+       "syslog": SyslogGenerator,  # ← add here
+   }
+   ```
+5. **Add the stream mapping** in `LOG_TYPE_STREAM_MAP` in `sentinel_data_generator/core/config.py` (already pre-populated for the four base types).
+6. **Write tests** in `tests/test_<generator>.py`.
+7. **Update `README.md`** to list the new supported log type.
+
+### Example: Minimal Generator
+
+```python
+"""Syslog event generator."""
+
+from sentinel_data_generator.generators.base import BaseGenerator
+from sentinel_data_generator.models.schemas import SyslogEvent
+
+class SyslogGenerator(BaseGenerator):
+    def generate(self, count, time_range):
+        timestamps = self._distribute_timestamps(count, *time_range)
+        events = []
+        for ts in timestamps:
+            event = SyslogEvent(
+                TimeGenerated=ts,
+                Computer=self.scenario.get("host", self.faker.hostname()),
+                HostIP=self.faker.ipv4_private(),
+                Facility="auth",
+                SeverityLevel="warning",
+                ProcessName="sshd",
+                SyslogMessage=f"Failed password for root from {self.faker.ipv4_public()}",
+            )
+            events.append(event.model_dump(mode="json"))
+        return events
+```
+
+## Adding a New Output Adapter
+
+1. Create a module in `sentinel_data_generator/outputs/` (e.g., `webhook.py`).
+2. Subclass `BaseOutput` and implement the `send(events, stream_name)` method.
+3. Register the adapter in `create_output()` in `sentinel_data_generator/core/engine.py`.
+4. Add any new config fields to `OutputConfig` in `sentinel_data_generator/core/config.py`.
+5. Write tests with mocked external calls.
 
 ## Adding a New Scenario
 
-1. Create a YAML file in `config/scenarios/`.
-2. Define scenario parameters (attacker IPs, target users, event distribution, etc.).
-3. Ensure the scenario is validated by the config Pydantic model.
-4. Add tests for the scenario.
+1. Add a new entry to the `scenarios` list in your `config/config.yaml`.
+2. Set the `log_type` to match a registered generator.
+3. Provide generator-specific `parameters`.
+4. Optionally override `stream_name` and `count`.
+
+```yaml
+scenarios:
+  - name: ssh_brute_force
+    log_type: syslog
+    stream_name: "Custom-SyslogDemo_CL"
+    description: "Simulate SSH brute-force attempts"
+    count: 100
+    parameters:
+      host: "web-svr01.contoso.com"
+      facility: "auth"
+      severity: "warning"
+```
 
 ## Testing
 
@@ -101,7 +164,8 @@ ruff check .
 - Use **fixtures** for reusable test data.
 - **Mock all Azure SDK calls** — never make real API calls in tests.
 - Aim for **80%+ code coverage**.
-- Run tests: `python -m pytest --cov=sentinel_data_generator`
+- Current test suite: 38 tests across 4 files.
+- Run tests: `python -m pytest --cov=sentinel_data_generator -v`
 
 ## Pull Request Checklist
 
@@ -112,6 +176,7 @@ ruff check .
 - [ ] `ruff check .` passes with no errors
 - [ ] `ruff format .` applied
 - [ ] All tests pass (`python -m pytest`)
+- [ ] New generator is registered in `GENERATOR_REGISTRY`
 - [ ] Commit messages follow Conventional Commits
 - [ ] No credentials or secrets in code or config
 

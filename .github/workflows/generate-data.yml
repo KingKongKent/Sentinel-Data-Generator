@@ -1,0 +1,77 @@
+name: Generate Sentinel Demo Data
+
+on:
+  # Run on a schedule (default: every 6 hours)
+  schedule:
+    - cron: '0 */6 * * *'
+  
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'Number of events per scenario'
+        required: false
+        default: '50'
+      log_level:
+        description: 'Logging level'
+        required: false
+        default: 'INFO'
+        type: choice
+        options:
+          - DEBUG
+          - INFO
+          - WARNING
+          - ERROR
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  generate:
+    name: Generate and Send Data
+    runs-on: ubuntu-latest
+    
+    # Required for OIDC authentication (if using federated credentials)
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate and send data to Sentinel
+        env:
+          # Azure authentication (Service Principal)
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          # Data Collection settings
+          SENTINEL_DCE_ENDPOINT: ${{ secrets.SENTINEL_DCE_ENDPOINT }}
+          SENTINEL_DCR_ID: ${{ secrets.SENTINEL_DCR_ID }}
+        run: |
+          python -m sentinel_data_generator \
+            --output log_analytics \
+            --count ${{ github.event.inputs.count || '50' }} \
+            --log-level ${{ github.event.inputs.log_level || 'INFO' }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Sentinel Data Generator Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Count per scenario:** ${{ github.event.inputs.count || '50' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Log level:** ${{ github.event.inputs.log_level || 'INFO' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY

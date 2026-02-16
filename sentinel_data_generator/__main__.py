@@ -5,6 +5,12 @@ import logging
 import sys
 from pathlib import Path
 
+from sentinel_data_generator.core.config import load_config
+from sentinel_data_generator.core.engine import run
+from sentinel_data_generator.utils.exceptions import (
+    ConfigurationError,
+    SentinelDataGeneratorError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +83,50 @@ def main(argv: list[str] | None = None) -> int:
     logger.info("Sentinel Data Generator v%s starting", "0.1.0")
     logger.info("Config file: %s", args.config)
 
-    # TODO: Load config, initialize engine, run generation
-    logger.warning("Not yet implemented — scaffolding only.")
-    return 0
+    try:
+        # Build CLI overrides dict
+        overrides = {}
+        if args.output:
+            overrides["output"] = args.output
+        if args.count is not None:
+            overrides["count"] = args.count
+
+        # Load and validate configuration
+        config = load_config(args.config, overrides=overrides)
+
+        if not config.scenarios:
+            logger.warning("No scenarios defined in config — nothing to do.")
+            return 0
+
+        # Run all scenarios
+        summary = run(config)
+
+        # Report results
+        for name, info in summary["scenarios"].items():
+            status = info["status"]
+            count = info["events_generated"]
+            if status == "success":
+                logger.info("  ✓ %s: %d events sent", name, count)
+            else:
+                logger.error("  ✗ %s: %s", name, status)
+
+        # Return non-zero if any scenario failed
+        failed = [n for n, i in summary["scenarios"].items() if i["status"] != "success"]
+        if failed:
+            logger.error("%d scenario(s) failed: %s", len(failed), ", ".join(failed))
+            return 1
+
+        return 0
+
+    except ConfigurationError as exc:
+        logger.error("Configuration error: %s", exc)
+        return 2
+    except SentinelDataGeneratorError as exc:
+        logger.error("Error: %s", exc)
+        return 1
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user.")
+        return 130
 
 
 if __name__ == "__main__":
