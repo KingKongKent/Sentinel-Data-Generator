@@ -22,9 +22,16 @@ on:
           - INFO
           - WARNING
           - ERROR
+      build_docker:
+        description: 'Build and push Docker image'
+        required: false
+        default: false
+        type: boolean
 
 env:
   PYTHON_VERSION: '3.12'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   generate:
@@ -74,7 +81,62 @@ jobs:
         run: |
           echo "## Sentinel Data Generator Run" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Count per scenario:** ${{ github.event.inputs.count || '50' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Log level:** ${{ github.event.inputs.log_level || 'INFO' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Count per scenario | ${{ github.event.inputs.count || '50' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Log level | ${{ github.event.inputs.log_level || 'INFO' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Scenarios Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **SecurityEvent**: brute_force_login, privilege_escalation" >> $GITHUB_STEP_SUMMARY
+          echo "- **CommonSecurityLog**: firewall_traffic, ids_intrusion_detection, threat_intel_matches" >> $GITHUB_STEP_SUMMARY
+
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: generate
+    if: ${{ github.event.inputs.build_docker == 'true' }}
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Image Summary
+        run: |
+          echo "## Docker Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Image pushed to: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Tags:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

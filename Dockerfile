@@ -1,6 +1,24 @@
 # Sentinel Data Generator - Container Image
-# Build: docker build -t sentinel-datagen .
-# Run:   docker run --rm -e SENTINEL_DCE_ENDPOINT=... -e SENTINEL_DCR_ID=... sentinel-datagen
+# Generates realistic demo/test data for Microsoft Sentinel.
+#
+# Supported log types:
+#   - SecurityEvent (Windows security events)
+#   - CommonSecurityLog (CEF format: firewall, IDS, threat intel)
+#
+# Build:
+#   docker build -t sentinel-datagen .
+#
+# Run (send to Sentinel):
+#   docker run --rm \
+#     -e AZURE_CLIENT_ID=<sp-client-id> \
+#     -e AZURE_CLIENT_SECRET=<sp-secret> \
+#     -e AZURE_TENANT_ID=<tenant-id> \
+#     -e SENTINEL_DCE_ENDPOINT=<dce-endpoint> \
+#     -e SENTINEL_DCR_ID=<dcr-id> \
+#     sentinel-datagen --output log_analytics --count 100
+#
+# Run (stdout preview):
+#   docker run --rm sentinel-datagen --output stdout --count 10
 
 FROM python:3.12-slim
 
