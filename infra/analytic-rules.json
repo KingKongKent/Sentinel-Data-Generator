@@ -1,0 +1,459 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Log Analytics workspace with Sentinel enabled"
+      }
+    }
+  },
+  "variables": {
+    "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-windows')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Windows Brute Force Attack Detected",
+        "description": "Detects multiple failed logon attempts (Event ID 4625) from the same source IP within a short time window, indicating a potential brute force attack against Windows systems.",
+        "severity": "High",
+        "enabled": true,
+        "query": "SecurityEventDemo_CL\n| where EventID == 4625\n| summarize FailedAttempts = count(), TargetAccounts = dcount(Account), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by IpAddress, Computer\n| where FailedAttempts >= 5\n| extend Duration = LastAttempt - FirstAttempt\n| project IpAddress, Computer, FailedAttempts, TargetAccounts, FirstAttempt, LastAttempt, Duration",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["CredentialAccess", "InitialAccess"],
+        "techniques": ["T1110"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "IpAddress" }]
+          },
+          {
+            "entityType": "Host",
+            "fieldMappings": [{ "identifier": "HostName", "columnName": "Computer" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-privilege-escalation')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Privilege Escalation - New Account with Special Privileges",
+        "description": "Detects when a new user account is created (Event ID 4720) followed by special logon privileges (Event ID 4672), which may indicate privilege escalation.",
+        "severity": "High",
+        "enabled": true,
+        "query": "let NewAccounts = SecurityEventDemo_CL\n| where EventID == 4720\n| project AccountCreated = Account, CreatedTime = TimeGenerated, Computer;\nlet SpecialLogons = SecurityEventDemo_CL\n| where EventID == 4672\n| project Account, PrivilegeTime = TimeGenerated, Computer;\nNewAccounts\n| join kind=inner (SpecialLogons) on $left.AccountCreated == $right.Account, Computer\n| where PrivilegeTime between (CreatedTime .. (CreatedTime + 1h))\n| project AccountCreated, Computer, CreatedTime, PrivilegeTime, TimeDelta = PrivilegeTime - CreatedTime",
+        "queryFrequency": "PT15M",
+        "queryPeriod": "PT2H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["PrivilegeEscalation", "Persistence"],
+        "techniques": ["T1078", "T1136"],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [{ "identifier": "Name", "columnName": "AccountCreated" }]
+          },
+          {
+            "entityType": "Host",
+            "fieldMappings": [{ "identifier": "HostName", "columnName": "Computer" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-firewall-high-volume-deny')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] High Volume Firewall Denies from Single Source",
+        "description": "Detects when a single source IP generates a high volume of firewall deny events, indicating potential reconnaissance or attack activity.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"deny\", \"block\", \"drop\")\n| summarize DenyCount = count(), TargetIPs = dcount(DestinationIP), TargetPorts = dcount(DestinationPort) by SourceIP, DeviceVendor, DeviceProduct\n| where DenyCount >= 50\n| project SourceIP, DeviceVendor, DeviceProduct, DenyCount, TargetIPs, TargetPorts",
+        "queryFrequency": "PT10M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["Reconnaissance", "Discovery"],
+        "techniques": ["T1046", "T1595"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ids-intrusion-detection')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] IDS Intrusion Alert Detected",
+        "description": "Detects high and critical severity IDS alerts that may indicate active intrusion attempts or successful compromise.",
+        "severity": "High",
+        "enabled": true,
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"intrusion\", \"ids\", \"ips\", \"attack\")\n| where LogSeverity in (\"High\", \"Critical\", \"9\", \"10\")\n| summarize AlertCount = count(), Activities = make_set(Activity) by SourceIP, DestinationIP, DeviceVendor, DeviceProduct\n| where AlertCount >= 1\n| project SourceIP, DestinationIP, DeviceVendor, DeviceProduct, AlertCount, Activities",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT30M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT30M",
+        "suppressionEnabled": false,
+        "tactics": ["InitialAccess", "Execution", "LateralMovement"],
+        "techniques": ["T1190", "T1210"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "DestinationIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-threat-intel-match')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Threat Intelligence IOC Match",
+        "description": "Detects when network traffic matches known threat intelligence indicators, suggesting communication with malicious infrastructure.",
+        "severity": "High",
+        "enabled": true,
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"threatintel\", \"ioc\", \"malware\", \"c2\", \"command\")\n| project TimeGenerated, SourceIP, DestinationIP, Activity, DeviceVendor, DeviceProduct, LogSeverity, RequestURL\n| extend ThreatIndicator = coalesce(RequestURL, DestinationIP)",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT30M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT30M",
+        "suppressionEnabled": false,
+        "tactics": ["CommandAndControl", "Exfiltration"],
+        "techniques": ["T1071", "T1041"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "DestinationIP" }]
+          },
+          {
+            "entityType": "URL",
+            "fieldMappings": [{ "identifier": "Url", "columnName": "RequestURL" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-aad-brute-force')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Azure AD Brute Force Attack",
+        "description": "Detects multiple failed Azure AD sign-in attempts targeting the same user account, indicating a brute force attack.",
+        "severity": "High",
+        "enabled": true,
+        "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize FailedAttempts = count(), SourceIPs = dcount(IPAddress), Locations = make_set(Location), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by UserPrincipalName\n| where FailedAttempts >= 5\n| project UserPrincipalName, FailedAttempts, SourceIPs, Locations, FirstAttempt, LastAttempt",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["CredentialAccess", "InitialAccess"],
+        "techniques": ["T1110"],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [{ "identifier": "Name", "columnName": "UserPrincipalName" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-credential-stuffing')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Credential Stuffing Attack Detected",
+        "description": "Detects when multiple user accounts experience failed sign-ins from the same IP address, indicating a credential stuffing attack using leaked credentials.",
+        "severity": "High",
+        "enabled": true,
+        "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize TargetedUsers = dcount(UserPrincipalName), FailedAttempts = count(), UserList = make_set(UserPrincipalName, 10) by IPAddress, Location\n| where TargetedUsers >= 3 and FailedAttempts >= 5\n| project IPAddress, Location, TargetedUsers, FailedAttempts, UserList",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["CredentialAccess", "InitialAccess"],
+        "techniques": ["T1110"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "IPAddress" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-risky-signin-location')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Sign-in from Risky Location",
+        "description": "Detects Azure AD sign-ins that have elevated risk levels during the sign-in process, potentially indicating compromised credentials or suspicious activity.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "SigninLogDemo_CL\n| where RiskLevelDuringSignIn in (\"high\", \"medium\")\n| project TimeGenerated, UserPrincipalName, IPAddress, Location, AppDisplayName, RiskLevelDuringSignIn, RiskLevelAggregated, ResultType, ResultDescription, ClientAppUsed\n| order by TimeGenerated desc",
+        "queryFrequency": "PT10M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["InitialAccess"],
+        "techniques": ["T1078"],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [{ "identifier": "Name", "columnName": "UserPrincipalName" }]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "IPAddress" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ssh-brute-force')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] SSH Brute Force Attack on Linux",
+        "description": "Detects multiple failed SSH authentication attempts from the same source IP, indicating a brute force attack against Linux systems.",
+        "severity": "High",
+        "enabled": true,
+        "query": "SyslogDemo_CL\n| where ProcessName == \"sshd\" and SyslogMessage has \"Failed\"\n| summarize FailedAttempts = count(), TargetHosts = dcount(Computer), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by HostIP\n| where FailedAttempts >= 5\n| project HostIP, FailedAttempts, TargetHosts, FirstAttempt, LastAttempt, Duration = LastAttempt - FirstAttempt",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["CredentialAccess", "InitialAccess"],
+        "techniques": ["T1110"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "HostIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-sudo-abuse')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Suspicious Sudo Activity",
+        "description": "Detects failed sudo attempts or unusual sudo command patterns that may indicate privilege escalation attempts on Linux systems.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "SyslogDemo_CL\n| where ProcessName == \"sudo\" and SyslogMessage has_any (\"authentication failure\", \"NOT in sudoers\", \"incorrect password\")\n| summarize FailedSudoAttempts = count(), Commands = make_set(SyslogMessage, 5) by Computer, HostIP\n| where FailedSudoAttempts >= 3\n| project Computer, HostIP, FailedSudoAttempts, Commands",
+        "queryFrequency": "PT10M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["PrivilegeEscalation"],
+        "techniques": ["T1548"],
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [{ "identifier": "HostName", "columnName": "Computer" }]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "HostIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-service-failure')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Critical Service Failure Detected",
+        "description": "Detects critical service failures on Linux systems that may indicate system instability, attacks, or misconfigurations.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "SyslogDemo_CL\n| where SeverityLevel in (\"err\", \"crit\", \"alert\", \"emerg\")\n| where SyslogMessage has_any (\"failed\", \"error\", \"crash\", \"stopped\", \"killed\")\n| summarize ErrorCount = count(), Services = make_set(ProcessName, 10), Messages = make_set(SyslogMessage, 5) by Computer, SeverityLevel\n| where ErrorCount >= 2\n| project Computer, SeverityLevel, ErrorCount, Services, Messages",
+        "queryFrequency": "PT10M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["Impact"],
+        "techniques": ["T1489"],
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [{ "identifier": "HostName", "columnName": "Computer" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "deployedRules": {
+      "type": "array",
+      "value": [
+        "[Demo] Windows Brute Force Attack Detected",
+        "[Demo] Privilege Escalation - New Account with Special Privileges",
+        "[Demo] High Volume Firewall Denies from Single Source",
+        "[Demo] IDS Intrusion Alert Detected",
+        "[Demo] Threat Intelligence IOC Match",
+        "[Demo] Azure AD Brute Force Attack",
+        "[Demo] Credential Stuffing Attack Detected",
+        "[Demo] Sign-in from Risky Location",
+        "[Demo] SSH Brute Force Attack on Linux",
+        "[Demo] Suspicious Sudo Activity",
+        "[Demo] Critical Service Failure Detected"
+      ]
+    }
+  }
+}
