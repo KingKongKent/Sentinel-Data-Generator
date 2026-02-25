@@ -2,18 +2,24 @@
 // Brute Force Demo — Azure Static Web App + Function App
 //
 // Deploys:
-//   1. App Service Plan (Consumption / Y1)
-//   2. Storage Account (required by Function App)
-//   3. Azure Function App (Python 3.11, v2 model)
-//   4. Azure Static Web App (Free tier)
+//   1. Storage Account (required by Function App)
+//   2. Blob container for Flex Consumption deployment
+//   3. App Service Plan (Flex Consumption / FC1)
+//   4. Azure Function App (Python 3.11, v2 model)
+//   5. Azure Static Web App (Free tier)
+//   6. SWA linked backend
 //
 // Pre-requisites:
 //   - DCE + DCR from the parent infra/main.bicep must already be deployed.
-//   - A managed identity with "Monitoring Metrics Publisher" on the DCR.
+//   - After deployment, grant the Function App managed identity
+//     "Monitoring Metrics Publisher" on the DCR.
 // ============================================================================
 
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
+
+@description('Azure region for Static Web App (must be in a supported SWA region).')
+param swaLocation string = 'eastus2'
 
 @description('Friendly name prefix for resources.')
 param namePrefix string = 'sentinel-datagen'
@@ -45,6 +51,7 @@ var functionAppName = '${namePrefix}-bf-func'
 var appServicePlanName = '${namePrefix}-bf-plan'
 var storageAccountName = replace('${namePrefix}bfsa', '-', '')
 var swaName = '${namePrefix}-bf-swa'
+var deploymentContainerName = 'deployments'
 
 // ============================================================================
 // Storage Account (required by Function App)
@@ -64,49 +71,78 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
+// Blob service + deployment container for Flex Consumption
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: deploymentContainerName
+}
+
 // ============================================================================
-// App Service Plan (Consumption)
+// App Service Plan (Flex Consumption / FC1)
 // ============================================================================
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
   location: location
   tags: tags
   kind: 'functionapp'
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: 'FC1'
+    tier: 'FlexConsumption'
+  }
+  properties: {
+    reserved: true
   }
 }
 
 // ============================================================================
-// Function App (Python 3.11, v2 model)
+// Function App (Python 3.11, Flex Consumption, v2 model)
 // ============================================================================
 
-resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   name: functionAppName
   location: location
   tags: tags
-  kind: 'functionapp'
+  kind: 'functionapp,linux'
   identity: {
     type: 'SystemAssigned'
   }
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    functionAppConfig: {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: '${storageAccount.properties.primaryEndpoints.blob}${deploymentContainerName}'
+          authentication: {
+            type: 'SystemAssignedIdentity'
+          }
+        }
+      }
+      runtime: {
+        name: 'python'
+        version: '3.11'
+      }
+      scaleAndConcurrency: {
+        maximumInstanceCount: 40
+        instanceMemoryMB: 2048
+      }
+    }
     siteConfig: {
-      pythonVersion: '3.11'
-      linuxFxVersion: 'PYTHON|3.11'
       cors: {
         allowedOrigins: [
-          'https://${swaName}.azurestaticapps.net'
-          'http://localhost:4280'  // SWA CLI local dev
+          'https://${staticWebApp.properties.defaultHostname}'
+          'http://localhost:4280'
         ]
       }
       appSettings: [
-        { name: 'AzureWebJobsStorage', value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}' }
-        { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
-        { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'python' }
+        { name: 'AzureWebJobsStorage__accountName', value: storageAccount.name }
         { name: 'DCE_ENDPOINT', value: dceEndpoint }
         { name: 'DCR_IMMUTABLE_ID', value: dcrImmutableId }
         { name: 'STREAM_NAME', value: streamName }
@@ -122,23 +158,13 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
 
 resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: swaName
-  location: location
+  location: swaLocation
   tags: tags
   sku: {
     name: 'Free'
     tier: 'Free'
   }
   properties: {}
-}
-
-// Link the Function App as the SWA backend
-resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
-  parent: staticWebApp
-  name: 'backend'
-  properties: {
-    backendResourceId: functionApp.id
-    region: location
-  }
 }
 
 // ============================================================================
@@ -149,7 +175,7 @@ resource swaBackend 'Microsoft.Web/staticSites/linkedBackends@2023-12-01' = {
 output swaUrl string = 'https://${staticWebApp.properties.defaultHostname}'
 
 @description('Function App default hostname.')
-output functionAppUrl string = 'https://${functionApp.properties.defaultHostname}'
+output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
 
 @description('Function App system-assigned managed identity principal ID. Grant this "Monitoring Metrics Publisher" role on the DCR.')
 output functionAppPrincipalId string = functionApp.identity.principalId

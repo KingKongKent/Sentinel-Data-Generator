@@ -6,9 +6,12 @@
     "use strict";
 
     // ---- Config ----------------------------------------------------------
-    // When running locally with SWA CLI the API is proxied at /api.
-    // In production (Azure SWA linked backend) the same /api prefix works.
-    const API_URL = "/api/attempt";
+    // Auto-detect the API URL:
+    //   - Local dev with SWA CLI  → /api/attempt (proxy handles it)
+    //   - Production (SWA + Function App via CORS) → Function App URL
+    const API_URL = window.location.hostname === "localhost"
+        ? "/api/attempt"
+        : "https://sentinel-datagen-bf-func.azurewebsites.net/api/attempt";
 
     // ---- DOM refs --------------------------------------------------------
     const nicknamePanel  = document.getElementById("nickname-panel");
