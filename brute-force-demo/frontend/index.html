@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Brute Force Demo — Microsoft Sentinel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🔐 Brute Force Demo</h1>
+            <p class="subtitle">Can you crack the 4-digit PIN?</p>
+        </header>
+
+        <!-- Nickname entry (shown first) -->
+        <div id="nickname-panel" class="panel">
+            <label for="nickname-input">Enter your nickname</label>
+            <input type="text" id="nickname-input" maxlength="30"
+                   placeholder="e.g. alice" autocomplete="off" autofocus>
+            <button id="nickname-btn" class="btn-primary" disabled>Start Cracking</button>
+        </div>
+
+        <!-- PIN pad (shown after nickname) -->
+        <div id="pin-panel" class="panel hidden">
+            <div class="player-info">
+                Playing as <span id="player-name"></span>
+                <button id="change-name" class="btn-link">change</button>
+            </div>
+
+            <!-- PIN display -->
+            <div id="pin-display">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+
+            <!-- Number pad -->
+            <div class="numpad">
+                <button class="num" data-digit="1">1</button>
+                <button class="num" data-digit="2">2</button>
+                <button class="num" data-digit="3">3</button>
+                <button class="num" data-digit="4">4</button>
+                <button class="num" data-digit="5">5</button>
+                <button class="num" data-digit="6">6</button>
+                <button class="num" data-digit="7">7</button>
+                <button class="num" data-digit="8">8</button>
+                <button class="num" data-digit="9">9</button>
+                <button class="num clear" data-digit="clear">⌫</button>
+                <button class="num" data-digit="0">0</button>
+                <button class="num submit" data-digit="submit">↵</button>
+            </div>
+
+            <!-- Result feedback -->
+            <div id="result-feedback" class="hidden"></div>
+
+            <!-- Stats -->
+            <div id="stats" class="stats">
+                Attempts: <span id="attempt-count">0</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>Every attempt is logged to <strong>Microsoft Sentinel</strong> in real time.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

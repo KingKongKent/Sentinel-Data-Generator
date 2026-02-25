@@ -35,12 +35,14 @@ var securityEventTable = 'SecurityEventDemo_CL'
 var signinLogTable = 'SigninLogDemo_CL'
 var syslogTable = 'SyslogDemo_CL'
 var commonSecurityLogTable = 'CommonSecurityLogDemo_CL'
+var bruteForceDemoTable = 'BruteForceDemo_CL'
 
 // Stream names (must start with Custom-)
 var securityEventStream = 'Custom-${securityEventTable}'
 var signinLogStream = 'Custom-${signinLogTable}'
 var syslogStream = 'Custom-${syslogTable}'
 var commonSecurityLogStream = 'Custom-${commonSecurityLogTable}'
+var bruteForceDemoStream = 'Custom-${bruteForceDemoTable}'
 
 // Native table streams for live tables
 var commonSecurityLogNativeStream = 'Custom-CommonSecurityLogNative'
@@ -167,6 +169,25 @@ resource commonSecurityLogDemoTable 'Microsoft.OperationalInsights/workspaces/ta
   }
 }
 
+resource bruteForceDemoTable_resource 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: workspace
+  name: bruteForceDemoTable
+  properties: {
+    schema: {
+      name: bruteForceDemoTable
+      columns: [
+        { name: 'TimeGenerated', type: 'dateTime', description: 'Attempt timestamp in UTC' }
+        { name: 'Nickname', type: 'string', description: 'Audience member chosen nickname' }
+        { name: 'Pincode', type: 'string', description: 'The 4-digit PIN guessed' }
+        { name: 'AttemptResult', type: 'string', description: 'Success or Failure' }
+        { name: 'SourceIP', type: 'string', description: 'Submitter IP address' }
+        { name: 'UserAgent', type: 'string', description: 'Browser user agent string' }
+      ]
+    }
+    retentionInDays: 30
+  }
+}
+
 // ============================================================================
 // Data Collection Rule
 // ============================================================================
@@ -180,6 +201,7 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
     signinLogDemoTable
     syslogDemoTable
     commonSecurityLogDemoTable
+    bruteForceDemoTable_resource
   ]
   properties: {
     dataCollectionEndpointId: dataCollectionEndpoint.id
@@ -241,6 +263,16 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
           { name: 'DestinationPort', type: 'int' }
           { name: 'Protocol', type: 'string' }
           { name: 'RequestURL', type: 'string' }
+        ]
+      }
+      '${bruteForceDemoStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'Nickname', type: 'string' }
+          { name: 'Pincode', type: 'string' }
+          { name: 'AttemptResult', type: 'string' }
+          { name: 'SourceIP', type: 'string' }
+          { name: 'UserAgent', type: 'string' }
         ]
       }
       // Stream for native CommonSecurityLog table (CEF schema)
@@ -308,6 +340,12 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
         outputStream: commonSecurityLogStream
       }
       {
+        streams: [ bruteForceDemoStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: bruteForceDemoStream
+      }
+      {
         streams: [ commonSecurityLogNativeStream ]
         destinations: [ 'sentinel-workspace' ]
         transformKql: 'source'
@@ -356,3 +394,6 @@ output commonSecurityLogNativeStreamName string = commonSecurityLogNativeStream
 
 @description('Stream name for native Syslog table.')
 output syslogNativeStreamName string = syslogNativeStream
+
+@description('Stream name for BruteForceDemo live demo data.')
+output bruteForceDemoStreamName string = bruteForceDemoStream

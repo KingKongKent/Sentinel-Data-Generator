@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "DCE_ENDPOINT": "https://your-dce-endpoint.ingest.monitor.azure.com",
+    "DCR_IMMUTABLE_ID": "dcr-00000000000000000000000000000000",
+    "STREAM_NAME": "Custom-BruteForceDemo_CL",
+    "SECRET_PIN": "1337"
+  },
+  "Host": {
+    "CORS": "*"
+  }
+}

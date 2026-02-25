@@ -32,6 +32,9 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Azure Functions local settings (contains secrets)
+local.settings.json
+
 # Configuration with secrets
 config/config.yaml
 !config/config.example.yaml
