@@ -11,7 +11,7 @@
     //   - Production (SWA + Function App via CORS) → Function App URL
     const API_URL = window.location.hostname === "localhost"
         ? "/api/attempt"
-        : "https://sentinel-datagen-bf-func.azurewebsites.net/api/attempt";
+        : "https://sentinel-bf-bf-func.azurewebsites.net/api/attempt";
 
     // ---- DOM refs --------------------------------------------------------
     const nicknamePanel  = document.getElementById("nickname-panel");

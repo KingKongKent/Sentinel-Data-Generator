@@ -121,27 +121,10 @@ def attempt(req: func.HttpRequest) -> func.HttpResponse:
         # if ingestion has a transient error.
 
     # --- Respond ---
+    # CORS is handled by the Azure Functions platform config (see Bicep)
+    # which restricts origins to the SWA hostname + localhost.
     return func.HttpResponse(
         json.dumps({"result": result, "nickname": nickname}),
         status_code=200,
         mimetype="application/json",
-        headers={"Access-Control-Allow-Origin": "*"},
-    )
-
-
-# ---------------------------------------------------------------------------
-# OPTIONS /api/attempt  (CORS preflight)
-# ---------------------------------------------------------------------------
-@app.function_name("attempt_options")
-@app.route(route="attempt", methods=["OPTIONS"])
-def attempt_options(req: func.HttpRequest) -> func.HttpResponse:
-    """Handle CORS preflight for the attempt endpoint."""
-    return func.HttpResponse(
-        status_code=204,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Max-Age": "86400",
-        },
     )

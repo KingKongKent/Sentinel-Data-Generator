@@ -11,13 +11,14 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
   - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler
   - **SigninLogs** — Azure AD/Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
   - **Syslog** — Linux system events with SSH authentication, sudo abuse, service failures
+- **Live Brute Force Demo** — interactive web app where audiences try to crack a 4-digit PIN in real time, with every attempt logged to Sentinel's `BruteForceDemo_CL` table (see [brute-force-demo/](brute-force-demo/))
 - **Scenario-driven** — configure brute-force attacks, privilege escalation, anomalous sign-ins, and more via YAML
 - **Multiple output targets** — send to Azure Log Analytics (`log_analytics`), write to local file (`file` — JSON/CSV), or print to console (`stdout`)
 - **Azure-native ingestion** — uses `DefaultAzureCredential` and `LogsIngestionClient` with automatic retry on HTTP 429
 - **Pydantic v2 validation** — all generated events are validated against strict schemas before output
 - **Configurable** — control event count, time range, random seed, and per-scenario parameters
 - **Infrastructure-as-Code** — includes Bicep templates to deploy DCE, DCR, custom tables, workbook, and analytic rules
-- **Sentinel content included** — pre-built workbook with 5 visualization tabs and 11 detection rules
+- **Sentinel content included** — pre-built workbook with 7 visualization tabs and 11 detection rules
 - **Extensible** — add new log types by subclassing `BaseGenerator` and registering in the engine
 
 ## Prerequisites
@@ -158,12 +159,17 @@ Sentinel-Data-Generator/
 │       └── generate-data.yml       # GitHub Actions workflow
 ├── .vscode/
 │   └── extensions.json             # Recommended VS Code extensions
+├── brute-force-demo/
+│   ├── api/                        # Azure Function (Python v2)
+│   ├── frontend/                   # Static Web App (HTML/CSS/JS)
+│   ├── infra/                      # SWA + Function App Bicep
+│   └── README.md                   # Demo setup & deployment guide
 ├── infra/
 │   ├── main.bicep                  # DCE + DCR + custom tables (Bicep)
 │   ├── main.bicepparam             # Deployment parameters
 │   ├── deploy.ps1                  # PowerShell deployment script
 │   ├── deploy.sh                   # Bash deployment script
-│   ├── workbook.json               # Sentinel workbook (5 tabs)
+│   ├── workbook.json               # Sentinel workbook (7 tabs)
 │   └── analytic-rules.json         # 11 Sentinel detection rules
 ├── config/
 │   └── config.example.yaml         # Example YAML configuration
@@ -283,6 +289,7 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | CommonSecurityLog | `common_security_log_native` | `CommonSecurityLog` (native) | ✅ Implemented |
 | SigninLogs | `signin_logs` | `SigninLogDemo_CL` (custom) | ✅ Implemented |
 | Syslog | `syslog` | `SyslogDemo_CL` (custom) | ✅ Implemented |
+| BruteForceDemo | Live audience demo | `BruteForceDemo_CL` (custom) | ✅ Implemented |
 
 ### SecurityEvent Generator
 
@@ -386,6 +393,32 @@ Generates Linux syslog events for the `SyslogDemo_CL` custom table. Supports mul
 
 **Generated fields include:** `TimeGenerated`, `Facility`, `SeverityLevel`, `Computer`, `HostIP`, `ProcessName`, `ProcessID`, `SyslogMessage`.
 
+## Brute Force Demo (Live Audience)
+
+The `brute-force-demo/` folder contains a standalone interactive web app for live presentations. Your audience visits a web page and tries to guess a secret 4-digit PIN — every attempt is logged in real time to the `BruteForceDemo_CL` table in Sentinel.
+
+**Components:**
+
+| Resource | Technology | Purpose |
+|----------|------------|---------|
+| Frontend | Azure Static Web App | PIN-pad UI served to the audience |
+| Backend | Azure Function (Python, Flex Consumption) | Validates guesses, logs to Sentinel via Logs Ingestion API |
+| Table | `BruteForceDemo_CL` | Custom Log Analytics table for attempt data |
+
+**Changing the secret PIN:**
+
+```bash
+# Instant — no redeployment needed
+az functionapp config appsettings set \
+  --name <functionapp-name> \
+  --resource-group <YOUR_RG> \
+  --settings SECRET_PIN=4242
+```
+
+Or override the Bicep parameter at deploy time with `--parameters secretPin=4242`.
+
+Full setup, deployment, PIN configuration, and presenter workflow instructions are in the [brute-force-demo/README.md](brute-force-demo/README.md).
+
 ## Sentinel Content
 
 Pre-built Sentinel content is included for immediate use with the generated demo data.
@@ -415,15 +448,17 @@ A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tab
 
 ### Workbook
 
-The workbook (`infra/workbook.json`) provides 5 visualization tabs:
+The workbook (`infra/workbook.json`) provides 7 visualization tabs:
 
 | Tab | Visualizations |
 |-----|---------------|
 | **Overview** | Event distribution pie chart, events over time timeline |
 | **Security Events** | Windows events by type, failed logins by host |
 | **CommonSecurityLog** | Firewall events by vendor, threat intel matches |
-| **Sign-in Logs** | Sign-in results by location, risky sign-ins |
+| **Sign-in Logs** | Sign-in results by location, risky sign-ins, location summary table |
 | **Syslog** | Events by facility and severity, SSH failures |
+| **Alerts & Incidents** | Active alerts, incident timeline, severity breakdown |
+| **Brute Force Demo** | Live attempt timeline, per-nickname stats, most-guessed PINs |
 
 **Deploy the workbook:**
 

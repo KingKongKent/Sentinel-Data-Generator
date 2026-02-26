@@ -10,9 +10,17 @@ via the Azure Monitor Logs Ingestion API — giving you live SOC telemetry to qu
 ┌─────────────────────┐  POST /api/attempt  ┌────────────────────┐  Logs Ingestion  ┌──────────────────┐
 │  Azure Static Web   │ ─────────────────→  │  Azure Function    │ ───────────────→ │  Sentinel        │
 │  App (HTML/CSS/JS)  │ ←───────────────── │  App (Python v2)   │                  │  BruteForceDemo_CL│
-│                     │  {result: S/F}      │                    │                  └──────────────────┘
+│                     │  {result: S/F}      │  Flex Consumption  │                  └──────────────────┘
 └─────────────────────┘                     └────────────────────┘
+         CORS restricted to SWA hostname        Managed Identity
 ```
+
+**Key design points:**
+
+- The Function App runs on **Flex Consumption** (FC1) with a maximum of 5 instances.
+- Authentication to the Logs Ingestion API uses a **system-assigned managed identity** — no secrets stored.
+- **CORS** is handled at the Azure Functions platform level (configured in Bicep) — only the SWA hostname and `localhost` origins are allowed.
+- The Function App also needs **Storage Blob Data Contributor** and **Storage Account Contributor** roles on its storage account for Flex Consumption deployment.
 
 ## Table Schema — `BruteForceDemo_CL`
 
@@ -30,7 +38,7 @@ via the Azure Monitor Logs Ingestion API — giving you live SOC telemetry to qu
 - Azure subscription with a deployed **Log Analytics workspace** + **Microsoft Sentinel**
 - The parent `infra/main.bicep` deployed (creates DCE, DCR, and the `BruteForceDemo_CL` table)
 - [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) v4+
-- [SWA CLI](https://azure.github.io/static-web-apps-cli/) (`npm install -g @azure/static-web-apps-cli`)
+- [SWA CLI](https://azure.github.io/static-web-apps-cli/) (`npm install -g @azure/static-web-apps-cli`) — for local development only
 - Python 3.11+
 - Node.js 18+ (for SWA CLI)
 
@@ -93,20 +101,30 @@ az login
 
 ### 1. Deploy SWA + Function App infrastructure
 
+Edit `brute-force-demo/infra/main.bicepparam` with your values:
+
+| Parameter | Description |
+|-----------|-------------|
+| `namePrefix` | Prefix for all resource names (e.g. `sentinel-bf`) |
+| `dceEndpoint` | DCE endpoint URL from parent infra deployment |
+| `dcrImmutableId` | DCR immutable ID from parent infra deployment |
+| `streamName` | DCR stream name — default: `Custom-BruteForceDemo_CL` |
+| `secretPin` | The 4-digit PIN the audience must crack — default: `1337` |
+
 ```bash
 cd brute-force-demo/infra
 
-# Edit main.bicepparam with your DCE endpoint and DCR ID
 az deployment group create \
   --resource-group <YOUR_RG> \
   --template-file main.bicep \
   --parameters main.bicepparam
 ```
 
-### 2. Grant the Function App access to the DCR
+### 2. Grant the Function App access
 
-The Function App uses a system-assigned managed identity. Grant it the
-**Monitoring Metrics Publisher** role on the Data Collection Rule:
+The Function App uses a system-assigned managed identity. It needs two sets of roles:
+
+**a) Monitoring Metrics Publisher** on the Data Collection Rule (for log ingestion):
 
 ```bash
 # Get the principal ID from the deployment output
@@ -115,10 +133,10 @@ PRINCIPAL_ID=$(az deployment group show \
   --name main \
   --query properties.outputs.functionAppPrincipalId.value -o tsv)
 
-# Get the DCR resource ID
+# Get the DCR resource ID (in the parent resource group)
 DCR_ID=$(az monitor data-collection rule show \
-  --resource-group <YOUR_RG> \
-  --name sentinel-datagen-dcr \
+  --resource-group <PARENT_RG> \
+  --name <dcr-name> \
   --query id -o tsv)
 
 # Assign the role
@@ -129,29 +147,121 @@ az role assignment create \
   --scope $DCR_ID
 ```
 
+**b) Storage roles** on the Function App's storage account (required for Flex Consumption):
+
+```bash
+STORAGE_ID=$(az storage account show \
+  --name <storage-account-name> \
+  --resource-group <YOUR_RG> \
+  --query id -o tsv)
+
+az role assignment create \
+  --assignee-object-id $PRINCIPAL_ID \
+  --assignee-principal-type ServicePrincipal \
+  --role "Storage Blob Data Contributor" \
+  --scope $STORAGE_ID
+
+az role assignment create \
+  --assignee-object-id $PRINCIPAL_ID \
+  --assignee-principal-type ServicePrincipal \
+  --role "Storage Account Contributor" \
+  --scope $STORAGE_ID
+```
+
+> **Note:** RBAC assignments can take 1–2 minutes to propagate.
+
 ### 3. Deploy the Function App code
 
 ```bash
 cd brute-force-demo/api
-func azure functionapp publish sentinel-datagen-bf-func
+func azure functionapp publish <functionapp-name>
 ```
 
 ### 4. Deploy the Static Web App
+
+Before deploying, update the API URL in `frontend/script.js` to point to your Function App:
+
+```javascript
+const API_URL = "https://<functionapp-name>.azurewebsites.net/api/attempt";
+```
+
+Then deploy:
 
 ```bash
 cd brute-force-demo
 npx swa deploy frontend --env production
 ```
 
+### 5. Verify
+
+Open the SWA URL and submit a test PIN guess. Check that the event appears in Sentinel:
+
+```kql
+BruteForceDemo_CL
+| where TimeGenerated > ago(5m)
+| project TimeGenerated, Nickname, Pincode, AttemptResult
+```
+
+## Changing the Secret PIN
+
+The secret PIN defaults to `1337`. There are three ways to change it:
+
+### Method 1 — App Setting (instant, no redeployment)
+
+```bash
+az functionapp config appsettings set \
+  --name <functionapp-name> \
+  --resource-group <YOUR_RG> \
+  --settings SECRET_PIN=4242
+```
+
+This takes effect immediately — no restart needed.
+
+### Method 2 — Bicep parameter override (at deploy time)
+
+Pass a different value when deploying:
+
+```bash
+az deployment group create \
+  --resource-group <YOUR_RG> \
+  --template-file brute-force-demo/infra/main.bicep \
+  --parameters brute-force-demo/infra/main.bicepparam \
+  --parameters secretPin=4242
+```
+
+### Method 3 — Edit `main.bicepparam` (permanent change)
+
+Edit `brute-force-demo/infra/main.bicepparam` and change:
+
+```bicep
+param secretPin = '4242'
+```
+
+Then redeploy with `az deployment group create`.
+
+> **Tip:** For live demos, use **Method 1** right before the session — it's instant and doesn't require redeployment. Pick something other than `1337` so the audience can't just read the source code!
+
+## Pausing / Stopping the Demo
+
+To stop the Function App (prevents new attempts, stops billing):
+
+```bash
+az functionapp stop \
+  --name <functionapp-name> \
+  --resource-group <YOUR_RG>
+```
+
+To restart:
+
+```bash
+az functionapp start \
+  --name <functionapp-name> \
+  --resource-group <YOUR_RG>
+```
+
 ## Demo Day — Presenter Workflow
 
-1. **Change the secret PIN** (optional):
-   ```bash
-   az functionapp config appsettings set \
-     --name sentinel-datagen-bf-func \
-     --resource-group <YOUR_RG> \
-     --settings SECRET_PIN=4242
-   ```
+1. **Change the secret PIN** before the session (see [Changing the Secret PIN](#changing-the-secret-pin)).
 
 2. **Share the SWA URL** with the audience (QR code works great).
 
@@ -176,6 +286,8 @@ npx swa deploy frontend --env production
    | project TimeGenerated, Nickname, Pincode, AttemptResult, SourceIP
    | order by TimeGenerated desc
    ```
+
+5. **Stop the Function App** after the demo to prevent ongoing usage.
 
 ## Project Structure
 
