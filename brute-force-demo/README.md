@@ -243,17 +243,29 @@ Then redeploy with `az deployment group create`.
 
 ## Pausing / Stopping the Demo
 
-To stop the Function App (prevents new attempts, stops billing):
+Use the toggle script to enable or disable all public-facing resources in one command:
+
+```powershell
+# Before demo — enable public access and start the Function App
+.\brute-force-demo\infra\toggle-public-access.ps1 on
+
+# After demo — disable public access and stop the Function App
+.\brute-force-demo\infra\toggle-public-access.ps1 off
+```
+
+The script toggles:
+- **Storage account** `publicNetworkAccess` (Enabled / Disabled)
+- **Function App** start / stop
+
+Alternatively, you can manage them individually:
 
 ```bash
+# Stop the Function App
 az functionapp stop \
   --name <functionapp-name> \
   --resource-group <YOUR_RG>
-```
 
-To restart:
-
-```bash
+# Start the Function App
 az functionapp start \
   --name <functionapp-name> \
   --resource-group <YOUR_RG>
@@ -287,7 +299,32 @@ az functionapp start \
    | order by TimeGenerated desc
    ```
 
-5. **Stop the Function App** after the demo to prevent ongoing usage.
+5. **Watch for incidents** — the "[Demo] Brute Force PIN Cracked" analytic rule triggers a High-severity incident when someone guesses the correct PIN after failed attempts.
+
+6. **Stop the Function App** after the demo to prevent ongoing usage:
+
+   ```powershell
+   .\brute-force-demo\infra\toggle-public-access.ps1 off
+   ```
+
+## Detection Rules
+
+The `infra/analytic-rules.json` ARM template includes a dedicated rule for this demo:
+
+| Rule | Severity | Frequency | Description |
+|------|----------|-----------|-------------|
+| **[Demo] Brute Force PIN Cracked — Successful Guess** | High | 5 min | Fires when a user successfully guesses the PIN after prior failed attempts |
+
+Deploy it to your Sentinel workspace:
+
+```bash
+az deployment group create \
+  --resource-group <SENTINEL_RG> \
+  --template-file infra/analytic-rules.json \
+  --parameters workspaceName=<WORKSPACE_NAME>
+```
+
+The rule maps to **MITRE ATT&CK T1110** (Brute Force) and creates incidents with IP + account entity mappings.
 
 ## Project Structure
 
@@ -304,6 +341,8 @@ brute-force-demo/
 │   └── script.js                    # Form handling & API calls
 ├── infra/
 │   ├── main.bicep                   # SWA + Function App IaC
-│   └── main.bicepparam              # Parameter values
+│   ├── main.bicepparam              # Parameter values
+│   └── toggle-public-access.ps1     # Toggle public access on/off
+├── qr-code.png                      # QR code to frontend URL
 └── README.md                        # This file
 ```

@@ -436,6 +436,46 @@
           }
         }
       }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-pin-cracked')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Brute Force PIN Cracked — Successful Guess",
+        "description": "Detects when a user successfully guesses the secret PIN in the live brute force demo. A successful attempt following multiple failures is a strong indicator that the code was brute-forced.",
+        "severity": "High",
+        "enabled": true,
+        "query": "let Successes = BruteForceDemo_CL\n| where AttemptResult == \"Success\"\n| project SuccessTime = TimeGenerated, Nickname, Pincode, SourceIP, UserAgent;\nlet FailuresBeforeSuccess = BruteForceDemo_CL\n| where AttemptResult == \"Failure\"\n| summarize FailedAttempts = count(), FirstFailure = min(TimeGenerated), LastFailure = max(TimeGenerated) by Nickname, SourceIP;\nSuccesses\n| join kind=inner (FailuresBeforeSuccess) on Nickname, SourceIP\n| where LastFailure <= SuccessTime\n| project SuccessTime, Nickname, Pincode, SourceIP, UserAgent, FailedAttempts, FirstFailure, LastFailure, TimeToSuccess = SuccessTime - FirstFailure",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT30M",
+        "suppressionEnabled": false,
+        "tactics": ["CredentialAccess", "InitialAccess"],
+        "techniques": ["T1110"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [{ "identifier": "Name", "columnName": "Nickname" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT1H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
     }
   ],
   "outputs": {
@@ -452,7 +492,8 @@
         "[Demo] Sign-in from Risky Location",
         "[Demo] SSH Brute Force Attack on Linux",
         "[Demo] Suspicious Sudo Activity",
-        "[Demo] Critical Service Failure Detected"
+        "[Demo] Critical Service Failure Detected",
+        "[Demo] Brute Force PIN Cracked — Successful Guess"
       ]
     }
   }
