@@ -62,6 +62,53 @@
             </div>
         </div>
 
+        <!-- Sentinel prompts panel (always visible once playing) -->
+        <div id="prompts-panel" class="panel hidden">
+            <h2 class="prompts-heading">🔍 Try in Sentinel</h2>
+            <p class="prompts-subtitle">
+                Copy a prompt into <strong>Ask anything about your security data</strong>
+            </p>
+            <div id="prompts-list">
+                <!-- Natural-language prompts -->
+                <div class="prompt-card" data-prompt="Show me all brute force attempts">
+                    <span class="prompt-badge nl">Copilot</span>
+                    <span class="prompt-text">Show me all brute force attempts</span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+                <div class="prompt-card" data-prompt="Which users have the most failed PIN attempts?">
+                    <span class="prompt-badge nl">Copilot</span>
+                    <span class="prompt-text">Which users have the most failed PIN attempts?</span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+                <div class="prompt-card" data-prompt="Has anyone successfully cracked the PIN?">
+                    <span class="prompt-badge nl">Copilot</span>
+                    <span class="prompt-text">Has anyone successfully cracked the PIN?</span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+                <div class="prompt-card" data-prompt="Show me a timeline of all brute force attempts">
+                    <span class="prompt-badge nl">Copilot</span>
+                    <span class="prompt-text">Show me a timeline of all brute force attempts</span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+                <!-- KQL prompts (nickname-aware ones get updated by JS) -->
+                <div class="prompt-card" data-prompt-template="BruteForceDemo_CL | where Nickname == '{nickname}' | summarize Attempts=count(), Successes=countif(AttemptResult == &quot;Success&quot;) by Nickname, SourceIP">
+                    <span class="prompt-badge kql">KQL</span>
+                    <span class="prompt-text">My attempts — <code id="kql-nickname-placeholder">BruteForceDemo_CL | where Nickname == '…'</code></span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+                <div class="prompt-card" data-prompt="BruteForceDemo_CL | summarize Attempts=count(), DistinctPINs=dcount(Pincode) by Nickname | sort by Attempts desc">
+                    <span class="prompt-badge kql">KQL</span>
+                    <span class="prompt-text">Leaderboard — attempts per player</span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+                <div class="prompt-card" data-prompt="BruteForceDemo_CL | where AttemptResult == 'Success' | project TimeGenerated, Nickname, SourceIP">
+                    <span class="prompt-badge kql">KQL</span>
+                    <span class="prompt-text">Who cracked the PIN?</span>
+                    <button class="copy-btn" aria-label="Copy">⧉</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer>
             <p>Every attempt is logged to <strong>Microsoft Sentinel</strong> in real time.</p>

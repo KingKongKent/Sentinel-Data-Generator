@@ -24,6 +24,7 @@
     const dots           = pinDisplay.querySelectorAll(".dot");
     const resultFeedback = document.getElementById("result-feedback");
     const attemptCount   = document.getElementById("attempt-count");
+    const promptsPanel   = document.getElementById("prompts-panel");
 
     // ---- State -----------------------------------------------------------
     let nickname  = "";
@@ -44,6 +45,7 @@
 
     changeName.addEventListener("click", () => {
         pinPanel.classList.add("hidden");
+        promptsPanel.classList.add("hidden");
         nicknamePanel.classList.remove("hidden");
         nicknameInput.focus();
         resetPin();
@@ -55,6 +57,8 @@
         playerName.textContent = nickname;
         nicknamePanel.classList.add("hidden");
         pinPanel.classList.remove("hidden");
+        promptsPanel.classList.remove("hidden");
+        updatePromptNicknames();
         resetPin();
     }
 
@@ -155,4 +159,34 @@
         }
         resultFeedback.classList.remove("hidden");
     }
+
+    // ---- Sentinel prompts ------------------------------------------------
+    function updatePromptNicknames() {
+        // Update data-prompt for cards that use a template with {nickname}
+        document.querySelectorAll("[data-prompt-template]").forEach((card) => {
+            const tpl = card.getAttribute("data-prompt-template");
+            card.setAttribute("data-prompt", tpl.replace("{nickname}", nickname));
+        });
+        // Update the visible KQL snippet
+        const ph = document.getElementById("kql-nickname-placeholder");
+        if (ph) {
+            ph.textContent = `BruteForceDemo_CL | where Nickname == '${nickname}' | summarize Attempts=count(), Successes=countif(AttemptResult == "Success") by Nickname, SourceIP`;
+        }
+    }
+
+    // Copy-to-clipboard for prompt cards
+    promptsPanel.addEventListener("click", (e) => {
+        const btn = e.target.closest(".copy-btn");
+        if (!btn) return;
+        const card = btn.closest(".prompt-card");
+        const text = card.getAttribute("data-prompt") || card.getAttribute("data-prompt-template") || "";
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = "✓";
+            btn.classList.add("copied");
+            setTimeout(() => {
+                btn.textContent = "⧉";
+                btn.classList.remove("copied");
+            }, 1500);
+        });
+    });
 })();

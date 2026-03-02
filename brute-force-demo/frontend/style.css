@@ -261,6 +261,109 @@ footer strong {
     color: var(--accent-cyan);
 }
 
+/* ---- Sentinel Prompts Panel ---- */
+#prompts-panel {
+    margin-top: 0.5rem;
+}
+
+.prompts-heading {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+}
+
+.prompts-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.75rem;
+}
+
+.prompts-subtitle strong {
+    color: var(--accent-cyan);
+}
+
+#prompts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.prompt-card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    cursor: default;
+    transition: border-color 0.15s;
+}
+
+.prompt-card:hover {
+    border-color: var(--accent-cyan);
+}
+
+.prompt-badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+}
+
+.prompt-badge.nl {
+    background: rgba(88, 166, 255, 0.15);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+}
+
+.prompt-badge.kql {
+    background: rgba(210, 153, 34, 0.15);
+    color: #d2991f;
+    border: 1px solid rgba(210, 153, 34, 0.3);
+}
+
+.prompt-text {
+    flex: 1;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prompt-text code {
+    font-family: "SF Mono", "Cascadia Code", monospace;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.copy-btn {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    padding: 0.15rem 0.4rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.copy-btn:hover {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+}
+
+.copy-btn.copied {
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+}
+
 /* Responsive */
 @media (max-width: 420px) {
     .container {
