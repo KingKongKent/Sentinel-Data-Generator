@@ -64,7 +64,11 @@
 
         <!-- Sentinel prompts panel (always visible once playing) -->
         <div id="prompts-panel" class="panel hidden">
-            <h2 class="prompts-heading">🔍 Try in Sentinel</h2>
+            <button id="prompts-toggle" class="prompts-header" aria-expanded="false">
+                <span class="prompts-heading">🔍 Try in Sentinel</span>
+                <span class="prompts-chevron">▸</span>
+            </button>
+            <div id="prompts-body" class="prompts-body collapsed">
             <p class="prompts-subtitle">
                 Copy a prompt into <strong>Ask anything about your security data</strong>
             </p>
@@ -106,6 +110,7 @@
                     <span class="prompt-text">Who cracked the PIN?</span>
                     <button class="copy-btn" aria-label="Copy">⧉</button>
                 </div>
+            </div>
             </div>
         </div>
 

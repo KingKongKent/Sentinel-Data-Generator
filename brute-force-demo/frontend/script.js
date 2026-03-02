@@ -174,6 +174,15 @@
         }
     }
 
+    // Toggle prompts panel open/closed
+    const promptsToggle = document.getElementById("prompts-toggle");
+    const promptsBody   = document.getElementById("prompts-body");
+    promptsToggle.addEventListener("click", () => {
+        const expanded = promptsToggle.getAttribute("aria-expanded") === "true";
+        promptsToggle.setAttribute("aria-expanded", String(!expanded));
+        promptsBody.classList.toggle("collapsed", expanded);
+    });
+
     // Copy-to-clipboard for prompt cards
     promptsPanel.addEventListener("click", (e) => {
         const btn = e.target.closest(".copy-btn");

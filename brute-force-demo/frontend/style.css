@@ -266,11 +266,45 @@ footer strong {
     margin-top: 0.5rem;
 }
 
+.prompts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+}
+
 .prompts-heading {
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--text-primary);
-    margin: 0 0 0.25rem;
+    margin: 0;
+}
+
+.prompts-chevron {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    transition: transform 0.25s ease;
+}
+
+.prompts-header[aria-expanded="true"] .prompts-chevron {
+    transform: rotate(90deg);
+}
+
+.prompts-body {
+    overflow: hidden;
+    max-height: 600px;
+    transition: max-height 0.3s ease, opacity 0.25s ease;
+    opacity: 1;
+}
+
+.prompts-body.collapsed {
+    max-height: 0;
+    opacity: 0;
 }
 
 .prompts-subtitle {
