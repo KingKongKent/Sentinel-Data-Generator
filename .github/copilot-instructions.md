@@ -60,11 +60,12 @@ This is a **Python CLI tool** that generates realistic demo/test log data for **
 - Log schemas must match the **Data Collection Rule (DCR)** stream schema exactly.
 - Timestamps must be in **ISO 8601 UTC** format (`datetime.datetime.now(datetime.timezone.utc).isoformat()`).
 - Reuse the `LogsIngestionClient` instance — do not create a new client per batch (singleton pattern in `LogAnalyticsOutput`).
-- The Bicep IaC template (`infra/main.bicep`) defines four custom tables and their DCR streams:
+- The Bicep IaC template (`infra/main.bicep`) defines five custom tables and their DCR streams:
   - `Custom-SecurityEventDemo_CL`
   - `Custom-SigninLogDemo_CL`
   - `Custom-SyslogDemo_CL`
   - `Custom-CommonSecurityLogDemo_CL`
+  - `Custom-BruteForceDemo_CL`
 
 ### Data Generation
 - Each generator must produce data conforming to the target Sentinel table schema.
@@ -153,3 +154,33 @@ Notebooks in `notebooks/` are designed to run on the **Microsoft Sentinel Data L
 - Never generate or log real credentials, tokens, or secrets.
 - Demo data must use obviously fake values (e.g., `user@contoso.com`, `10.0.0.x` ranges, `203.0.113.x` documentation IPs).
 - Sanitize all configuration values before logging.
+
+### Brute Force Demo (`brute-force-demo/`)
+
+A standalone interactive web app for live presentations. Separate from the Python CLI — it has its own `api/`, `frontend/`, and `infra/` folders.
+
+#### Architecture
+- **Frontend:** Azure Static Web App (vanilla HTML/CSS/JS, no framework).
+- **Backend:** Azure Function App (Python v2, Flex Consumption), authenticates to Logs Ingestion API via system-assigned managed identity.
+- **Table:** `BruteForceDemo_CL` with columns: `TimeGenerated`, `Nickname`, `Pincode`, `AttemptResult`, `SourceIP`, `UserAgent`.
+
+#### Frontend Patterns
+- The frontend is a single-page app wrapped in an IIFE in `script.js`.
+- `API_URL` is auto-detected from the hostname (SWA proxy uses relative `/api/attempt`, otherwise falls back to the configured Function App URL).
+- The "Try in Sentinel" panel is a collapsible `<section>` using `max-height` CSS transition. State is toggled via `aria-expanded` on the header `<button>`.
+- Prompt cards use a `.prompt-badge` class with `.nl` (cyan) or `.kql` (gold) variant for type labeling.
+- KQL queries in prompt cards contain `"<your-nickname>"` placeholder text that is dynamically replaced with the user's entered nickname via `updatePromptNicknames()`.
+- Copy-to-clipboard uses `navigator.clipboard.writeText()` with a visual `✓ Copied` feedback state.
+
+#### Workbook (`infra/workbook.json`)
+- The workbook is an ARM template with `serializedData` JSON strings inside each item.
+- The Brute Force Demo tab (`groupBruteForce`) contains: summary tiles, timeline, per-nickname chart, most-guessed PINs, recent attempts, Leaderboard, Who Cracked the PIN?, and a Try in Sentinel markdown panel.
+- **Tiles visualization** requires queries that produce one row per tile. Use the `pack_array` → `mv-expand` → `bag_unpack` pattern to pivot aggregation columns into separate rows.
+- To edit workbook items programmatically, parse the outer ARM JSON, then parse the `serializedData` string of the target item, modify it, re-serialize, and write back.
+
+#### Analytic Rules
+- `infra/analytic-rules.json` contains 12 detection rules (ARM template).
+- The brute-force demo rule (`[Demo] Brute Force PIN Cracked`) queries `BruteForceDemo_CL`, joins successes with prior failures, maps to MITRE T1110, and runs every 5 minutes.
+
+#### Toggle Script
+- `brute-force-demo/infra/toggle-public-access.ps1` enables or disables public access on the storage account and starts/stops the Function App in one command (`on` / `off`).

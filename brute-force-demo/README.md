@@ -22,6 +22,24 @@ via the Azure Monitor Logs Ingestion API — giving you live SOC telemetry to qu
 - **CORS** is handled at the Azure Functions platform level (configured in Bicep) — only the SWA hostname and `localhost` origins are allowed.
 - The Function App also needs **Storage Blob Data Contributor** and **Storage Account Contributor** roles on its storage account for Flex Consumption deployment.
 
+## Frontend Features
+
+The PIN-pad UI includes a collapsible **"Try in Sentinel"** panel at the bottom of the page. It is collapsed by default and expands on click.
+
+The panel contains **7 ready-to-use prompt cards** for live demos:
+
+| # | Type | Prompt |
+|---|------|--------|
+| 1 | Copilot NL | "Show me all brute force attempts in the last hour" |
+| 2 | Copilot NL | "Who made the most PIN guessing attempts today?" |
+| 3 | Copilot NL | "Were there any successful PIN cracks? Show me the details" |
+| 4 | Copilot NL | "Summarize suspicious activity from the BruteForceDemo table" |
+| 5 | KQL | Attempts leaderboard by nickname |
+| 6 | KQL | Success timeline |
+| 7 | KQL | Attempts per PIN |
+
+Each card has a **copy-to-clipboard** button. KQL queries containing `"<your-nickname>"` are automatically replaced with the user's actual nickname when they enter one.
+
 ## Table Schema — `BruteForceDemo_CL`
 
 | Column | Type | Description |
@@ -277,7 +295,17 @@ az functionapp start \
 
 2. **Share the SWA URL** with the audience (QR code works great).
 
-3. **Show Sentinel live** while people attempt to crack the PIN:
+3. **Show Sentinel live** while people attempt to crack the PIN — use the **"Try in Sentinel" panel** on the frontend to copy Copilot prompts and KQL queries directly.
+
+4. **Open the workbook** — the Brute Force Demo tab shows live tiles, timeline, leaderboard, and a "Who Cracked the PIN?" panel.
+
+5. **Use Copilot** — paste the natural-language prompts from the frontend panel into Security Copilot:
+
+   > "Show me all brute force attempts in the last hour"
+
+   > "Who made the most PIN guessing attempts today?"
+
+6. **Run KQL queries** — copy from the frontend panel or use:
 
    ```kql
    BruteForceDemo_CL
@@ -290,18 +318,9 @@ az functionapp start \
    | order by Attempts desc
    ```
 
-4. **Timeline view** — watch the brute force unfold:
+7. **Watch for incidents** — the "[Demo] Brute Force PIN Cracked" analytic rule triggers a High-severity incident when someone guesses the correct PIN after failed attempts.
 
-   ```kql
-   BruteForceDemo_CL
-   | where TimeGenerated > ago(1h)
-   | project TimeGenerated, Nickname, Pincode, AttemptResult, SourceIP
-   | order by TimeGenerated desc
-   ```
-
-5. **Watch for incidents** — the "[Demo] Brute Force PIN Cracked" analytic rule triggers a High-severity incident when someone guesses the correct PIN after failed attempts.
-
-6. **Stop the Function App** after the demo to prevent ongoing usage:
+8. **Stop the Function App** after the demo to prevent ongoing usage:
 
    ```powershell
    .\brute-force-demo\infra\toggle-public-access.ps1 off
@@ -326,6 +345,21 @@ az deployment group create \
 
 The rule maps to **MITRE ATT&CK T1110** (Brute Force) and creates incidents with IP + account entity mappings.
 
+## Workbook — Brute Force Demo Tab
+
+The Sentinel workbook (`infra/workbook.json`) includes a dedicated **Brute Force Demo** tab with the following panels:
+
+| Panel | Visualization | Description |
+|-------|--------------|-------------|
+| **Summary Tiles** | Tiles | Total Attempts, Unique Nicknames, Unique PINs Tried, Successful Cracks |
+| **Attempt Timeline** | Time chart | Attempts over time, split by result |
+| **Attempts by Nickname** | Bar chart | Attempt count per nickname |
+| **Most Guessed PINs** | Bar chart | Top PINs by attempt volume |
+| **Recent Attempts** | Table | Last 50 attempts with full details |
+| **🏆 Leaderboard** | Table | Ranked by attempts, with distinct PINs and successes per nickname |
+| **🎉 Who Cracked the PIN?** | Table | All successful guesses with timestamp, nickname, PIN, IP, and user agent |
+| **Try in Sentinel** | Markdown | Same Copilot prompts and KQL queries as the frontend panel |
+
 ## Project Structure
 
 ```
@@ -336,9 +370,9 @@ brute-force-demo/
 │   ├── requirements.txt             # Python dependencies
 │   └── local.settings.json.example  # Template for local dev settings
 ├── frontend/
-│   ├── index.html                   # Demo page with PIN pad UI
-│   ├── style.css                    # Dark security-themed styling
-│   └── script.js                    # Form handling & API calls
+│   ├── index.html                   # PIN pad UI + collapsible "Try in Sentinel" panel
+│   ├── style.css                    # Dark security-themed styling + prompts panel CSS
+│   └── script.js                    # Form handling, API calls, copy-to-clipboard, nickname-aware KQL
 ├── infra/
 │   ├── main.bicep                   # SWA + Function App IaC
 │   ├── main.bicepparam              # Parameter values
