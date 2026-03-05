@@ -54,10 +54,14 @@ param(
     [ValidateSet(
         "All", "Reconnaissance", "InitialAccess", "Execution",
         "Persistence", "PrivilegeEscalation", "DefenseEvasion",
-        "CredentialAccess", "Discovery", "LateralMovement",
-        "Collection", "CommandAndControl", "Exfiltration"
+        "CredentialAccess", "Discovery", "AccountEnumeration",
+        "LateralMovement", "Collection", "CommandAndControl",
+        "Exfiltration"
     )]
     [string]$Phase = "All",
+
+    [Parameter(HelpMessage = "FQDN or IP of the Domain Controller for AD enumeration.")]
+    [string]$DomainController,
 
     [switch]$NoPause,
 
@@ -73,6 +77,7 @@ $script:TestDir = "$env:USERPROFILE\MDE-Demo-Test"
 $script:LogFile = "$script:TestDir\simulation-log.txt"
 $script:AlertsTriggered = @()
 $script:ArtifactsCreated = @()
+$script:DC = $DomainController
 
 # ============================================================================
 # Helper Functions
@@ -140,6 +145,27 @@ function Pause-IfInteractive {
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         Write-Host ""
     }
+}
+
+function Get-DomainControllerTarget {
+    <#
+    .SYNOPSIS
+        Prompts for a Domain Controller FQDN/IP if not already set.
+    #>
+    if ([string]::IsNullOrWhiteSpace($script:DC)) {
+        Write-Host ""
+        Write-Host "    This phase requires a Domain Controller target." -ForegroundColor Yellow
+        Write-Host "    Enter the FQDN or IP address of the DC to enumerate." -ForegroundColor Yellow
+        Write-Host "    (All queries are read-only - no changes are made to AD)" -ForegroundColor DarkGray
+        Write-Host ""
+        $script:DC = Read-Host "    Domain Controller FQDN or IP"
+        if ([string]::IsNullOrWhiteSpace($script:DC)) {
+            Write-StepResult "No Domain Controller specified - skipping AD enumeration" -Status Warning
+            return $false
+        }
+    }
+    Write-StepResult "Target Domain Controller: $($script:DC)" -Status Info
+    return $true
 }
 
 function Initialize-TestEnvironment {
@@ -656,6 +682,155 @@ function Invoke-Discovery {
 }
 
 # ============================================================================
+# Phase 8b: Account Enumeration against Domain Controller (TA0007)
+# ============================================================================
+
+function Invoke-AccountEnumeration {
+    Write-Banner "PHASE 8b: AD ACCOUNT ENUMERATION (TA0007)"
+
+    if (-not (Get-DomainControllerTarget)) { return }
+
+    $dc = $script:DC
+
+    # --- T1087.002: Account Discovery - Domain Account ---
+    Write-Phase -TacticId "TA0007" -TacticName "Discovery" `
+                -TechniqueId "T1087.002" -TechniqueName "Account Discovery: Domain Account" `
+                -Description "Enumerating domain user accounts via net user /domain.`nThis is the most common AD enumeration command used by attackers post-compromise."
+
+    Write-StepResult "Enumerating domain users via net user /domain..." -Status Info
+    $netUserOutput = net user /domain 2>&1 | Out-String
+    $userLines = ($netUserOutput -split "`n" | Where-Object { $_ -match '\S' })
+    Write-StepResult "net user /domain returned $($userLines.Count) lines" -Status Success
+    Write-ExpectedAlert "Domain account enumeration via net.exe"
+    Add-LogEntry "AccountEnum: net user /domain executed against $dc"
+
+    # --- T1087.002: LDAP query via PowerShell ---
+    Write-Phase -TacticId "TA0007" -TacticName "Discovery" `
+                -TechniqueId "T1087.002" -TechniqueName "Account Discovery: LDAP User Query" `
+                -Description "Querying the DC via LDAP for user objects using DirectorySearcher.`nAttackers use LDAP queries to enumerate all accounts, service accounts, and admins."
+
+    Write-StepResult "Performing LDAP user enumeration against $dc ..." -Status Info
+    try {
+        $ldapPath = "LDAP://$dc"
+        $searcher = New-Object DirectoryServices.DirectorySearcher
+        $searcher.SearchRoot = New-Object DirectoryServices.DirectoryEntry($ldapPath)
+        $searcher.Filter = "(objectCategory=user)"
+        $searcher.PageSize = 200
+        $searcher.PropertiesToLoad.AddRange(@("samaccountname", "displayname", "lastlogon", "memberof"))
+        $results = $searcher.FindAll()
+        Write-StepResult "LDAP query returned $($results.Count) user objects" -Status Success
+
+        # Show first 10 as sample (names only, no sensitive data)
+        $sample = $results | Select-Object -First 10
+        foreach ($entry in $sample) {
+            $sam = $entry.Properties["samaccountname"][0]
+            $display = if ($entry.Properties["displayname"].Count -gt 0) { $entry.Properties["displayname"][0] } else { "(no display name)" }
+            Write-StepResult "  User: $sam - $display" -Status Info
+        }
+        if ($results.Count -gt 10) {
+            Write-StepResult "  ... and $($results.Count - 10) more users" -Status Info
+        }
+        $results.Dispose()
+    }
+    catch {
+        Write-StepResult "LDAP query failed: $($_.Exception.Message)" -Status Warning
+        Write-StepResult "This may require domain-joined machine or valid credentials" -Status Warning
+    }
+    Write-ExpectedAlert "LDAP reconnaissance / Domain account enumeration"
+    Add-LogEntry "AccountEnum: LDAP user query executed against $dc"
+
+    # --- T1069.002: Permission Groups Discovery - Domain Groups ---
+    Write-Phase -TacticId "TA0007" -TacticName "Discovery" `
+                -TechniqueId "T1069.002" -TechniqueName "Permission Groups Discovery: Domain Groups" `
+                -Description "Enumerating high-value domain groups (Domain Admins, Enterprise Admins, etc.).`nAttackers target these groups to identify accounts with elevated privileges."
+
+    Write-StepResult "Enumerating privileged domain groups..." -Status Info
+
+    $highValueGroups = @(
+        "Domain Admins",
+        "Enterprise Admins",
+        "Schema Admins",
+        "Account Operators",
+        "Backup Operators",
+        "Server Operators",
+        "DnsAdmins"
+    )
+    foreach ($group in $highValueGroups) {
+        Write-StepResult "Querying group: $group" -Status Info
+        $groupResult = net group $group /domain 2>&1 | Out-String
+        $memberCount = ($groupResult -split "`n" | Where-Object { $_ -match '^\s+\S' }).Count
+        Write-StepResult "  Members found: $memberCount" -Status Info
+    }
+    Write-ExpectedAlert "Privileged group enumeration via net.exe"
+    Add-LogEntry "AccountEnum: Domain group enumeration executed"
+
+    # --- T1087.002: LDAP query for service accounts ---
+    Write-Phase -TacticId "TA0007" -TacticName "Discovery" `
+                -TechniqueId "T1087.002" -TechniqueName "Account Discovery: Service Accounts (SPN)" `
+                -Description "Searching for accounts with Service Principal Names (SPNs).`nThis is the first step of Kerberoasting - identifying service accounts to target."
+
+    Write-StepResult "Searching for accounts with SPNs (Kerberoasting recon)..." -Status Info
+    try {
+        $ldapPath = "LDAP://$dc"
+        $searcher = New-Object DirectoryServices.DirectorySearcher
+        $searcher.SearchRoot = New-Object DirectoryServices.DirectoryEntry($ldapPath)
+        $searcher.Filter = "(&(objectCategory=user)(servicePrincipalName=*))"
+        $searcher.PageSize = 200
+        $searcher.PropertiesToLoad.AddRange(@("samaccountname", "serviceprincipalname"))
+        $spnResults = $searcher.FindAll()
+        Write-StepResult "Found $($spnResults.Count) accounts with SPNs" -Status Success
+
+        foreach ($entry in ($spnResults | Select-Object -First 5)) {
+            $sam = $entry.Properties["samaccountname"][0]
+            $spn = $entry.Properties["serviceprincipalname"][0]
+            Write-StepResult "  SPN Account: $sam - $spn" -Status Info
+        }
+        if ($spnResults.Count -gt 5) {
+            Write-StepResult "  ... and $($spnResults.Count - 5) more SPN accounts" -Status Info
+        }
+        $spnResults.Dispose()
+    }
+    catch {
+        Write-StepResult "SPN query failed: $($_.Exception.Message)" -Status Warning
+    }
+    Write-ExpectedAlert "Kerberoasting reconnaissance / SPN enumeration"
+    Add-LogEntry "AccountEnum: SPN enumeration executed against $dc"
+
+    # --- T1016: System Network Configuration Discovery ---
+    Write-Phase -TacticId "TA0007" -TacticName "Discovery" `
+                -TechniqueId "T1016" -TechniqueName "System Network Configuration: Domain Trust" `
+                -Description "Enumerating domain trusts via nltest.`nAttackers map trust relationships to plan lateral movement across domains."
+
+    Write-StepResult "Enumerating domain trusts via nltest..." -Status Info
+    $trustOutput = nltest /domain_trusts /all_trusts 2>&1 | Out-String
+    Write-Host $trustOutput -ForegroundColor DarkGray
+    Write-StepResult "Domain trust enumeration complete" -Status Success
+
+    Write-StepResult "Querying DC info via nltest..." -Status Info
+    $dcInfoOutput = nltest /dsgetdc:$dc 2>&1 | Out-String
+    Write-Host $dcInfoOutput -ForegroundColor DarkGray
+    Write-StepResult "DC info query complete" -Status Success
+
+    Write-ExpectedAlert "Domain trust enumeration / nltest reconnaissance"
+    Add-LogEntry "AccountEnum: nltest domain trust enumeration executed"
+
+    # --- T1033: System Owner/User Discovery ---
+    Write-Phase -TacticId "TA0007" -TacticName "Discovery" `
+                -TechniqueId "T1033" -TechniqueName "System Owner/User Discovery" `
+                -Description "Querying currently logged-on users and domain password policy.`nAttackers check password policies to optimize brute-force attacks."
+
+    Write-StepResult "Querying domain password policy..." -Status Info
+    $policyOutput = net accounts /domain 2>&1 | Out-String
+    Write-Host $policyOutput -ForegroundColor DarkGray
+    Write-StepResult "Password policy enumeration complete" -Status Success
+
+    Write-ExpectedAlert "Domain password policy enumeration"
+    Add-LogEntry "AccountEnum: Password policy queried"
+
+    Pause-IfInteractive
+}
+
+# ============================================================================
 # Phase 9: Lateral Movement (TA0008)
 # ============================================================================
 
@@ -939,6 +1114,7 @@ function Show-Summary {
         @{ Name = "Defense Evasion";      Id = "TA0005" },
         @{ Name = "Credential Access";    Id = "TA0006" },
         @{ Name = "Discovery";            Id = "TA0007" },
+        @{ Name = "AD Account Enum";      Id = "TA0007" },
         @{ Name = "Lateral Movement";     Id = "TA0008" },
         @{ Name = "Collection";           Id = "TA0009" },
         @{ Name = "Command `& Control";    Id = "TA0011" },
@@ -1036,6 +1212,7 @@ $phaseMap = @{
     "DefenseEvasion"      = { Invoke-DefenseEvasion }
     "CredentialAccess"    = { Invoke-CredentialAccess }
     "Discovery"           = { Invoke-Discovery }
+    "AccountEnumeration"  = { Invoke-AccountEnumeration }
     "LateralMovement"     = { Invoke-LateralMovement }
     "Collection"          = { Invoke-Collection }
     "CommandAndControl"   = { Invoke-CommandAndControl }
@@ -1046,7 +1223,7 @@ if ($Phase -eq "All") {
     foreach ($key in @(
         "Reconnaissance", "InitialAccess", "Execution", "Persistence",
         "PrivilegeEscalation", "DefenseEvasion", "CredentialAccess",
-        "Discovery", "LateralMovement", "Collection",
+        "Discovery", "AccountEnumeration", "LateralMovement", "Collection",
         "CommandAndControl", "Exfiltration"
     )) {
         & $phaseMap[$key]
