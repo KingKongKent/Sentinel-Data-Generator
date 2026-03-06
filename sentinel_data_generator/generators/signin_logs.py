@@ -219,8 +219,13 @@ class SigninLogsGenerator(BaseGenerator):
 
         result = RESULT_CODES[result_key]
 
-        # Generate IP based on location risk
-        if location["risk"] == "high":
+        # Generate IP based on attack type and location risk
+        if attack_type == "credential_stuffing":
+            # Credential stuffing uses a small pool of botnet IPs
+            ip = random.choice([
+                "198.51.100.185", "203.0.113.145", "192.0.2.95",
+            ])
+        elif location["risk"] == "high":
             ip = self._generate_threat_ip()
         else:
             ip = self.faker.ipv4_public()

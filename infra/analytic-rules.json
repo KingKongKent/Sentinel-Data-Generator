@@ -139,7 +139,7 @@
         "description": "Detects high and critical severity IDS alerts that may indicate active intrusion attempts or successful compromise.",
         "severity": "High",
         "enabled": true,
-        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"intrusion\", \"ids\", \"ips\", \"attack\")\n| where LogSeverity in (\"High\", \"Critical\", \"9\", \"10\")\n| summarize AlertCount = count(), Activities = make_set(Activity) by SourceIP, DestinationIP, DeviceVendor, DeviceProduct\n| where AlertCount >= 1\n| project SourceIP, DestinationIP, DeviceVendor, DeviceProduct, AlertCount, Activities",
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"intrusion\", \"ids\", \"ips\", \"attack\")\n| where toint(LogSeverity) >= 8 or LogSeverity in (\"High\", \"Critical\")\n| summarize AlertCount = count(), Activities = make_set(Activity) by SourceIP, DestinationIP, DeviceVendor, DeviceProduct\n| where AlertCount >= 1\n| project SourceIP, DestinationIP, DeviceVendor, DeviceProduct, AlertCount, Activities",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
