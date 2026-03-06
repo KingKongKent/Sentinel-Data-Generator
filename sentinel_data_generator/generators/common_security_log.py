@@ -35,6 +35,10 @@ DEVICE_VENDORS: dict[str, dict[str, Any]] = {
         "products": ["ZIA"],
         "version": "6.0",
     },
+    "Ubiquiti": {
+        "products": ["UniFi Dream Machine", "UniFi Security Gateway"],
+        "version": "4.0.6",
+    },
 }
 
 # CEF event class definitions

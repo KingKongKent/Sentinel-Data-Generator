@@ -80,6 +80,14 @@ scenarios:
       event_type: "threat_intelligence"
       threat_actor_ip: true
 
+  - name: ubiquiti_firewall_traffic
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate Ubiquiti UniFi firewall traffic (allow/deny, IDS, VPN)"
+    count: 60
+    parameters:
+      vendor: "Ubiquiti"
+
   # SigninLogs scenarios - ingest to custom SigninLogDemo_CL table
   # (Native SigninLogs table is protected - only Entra ID can write to it)
   - name: suspicious_signins
