@@ -181,6 +181,7 @@ header h1 {
     transition: background 0.15s, transform 0.1s;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; /* prevent double-tap zoom on iOS */
 }
 
 .num:active {

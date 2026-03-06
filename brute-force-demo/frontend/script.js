@@ -5,6 +5,23 @@
 (() => {
     "use strict";
 
+    // ---- iOS Safari double-tap zoom prevention ----------------------------
+    // iOS ignores viewport user-scalable=no since iOS 10.
+    // Block rapid successive taps that trigger zoom.
+    let lastTouchEnd = 0;
+    document.addEventListener("touchend", (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+
+    // Block pinch-to-zoom gesture on iOS Safari
+    document.addEventListener("gesturestart", (e) => {
+        e.preventDefault();
+    });
+
     // ---- Config ----------------------------------------------------------
     // Auto-detect the API URL:
     //   - Local dev with SWA CLI  → /api/attempt (proxy handles it)
