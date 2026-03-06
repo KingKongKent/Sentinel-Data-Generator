@@ -1,4 +1,4 @@
-"""SigninLogs generator for Azure AD / Entra ID sign-in events."""
+"""SigninLogs generator for Microsoft Entra ID sign-in events."""
 
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ RISK_LEVELS: list[str] = [
 
 
 class SigninLogsGenerator(BaseGenerator):
-    """Generator for Azure AD / Entra ID SigninLogs events."""
+    """Generator for Microsoft Entra ID SigninLogs events."""
 
     def generate(
         self,

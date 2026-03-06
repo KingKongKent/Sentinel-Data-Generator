@@ -86,7 +86,7 @@ $Indicators = @(
     @{
         ip          = "203.0.113.50"
         displayName = "Demo Brute Force Source - 203.0.113.50"
-        description = "IP associated with Azure AD brute force attacks, TI IOC matches, and risky sign-ins in demo data"
+        description = "IP associated with Entra ID brute force attacks, TI IOC matches, and risky sign-ins in demo data"
         confidence  = 95
         tags        = @("demo", "soc-demo-data", "brute-force", "ioc-match")
     },

@@ -122,7 +122,7 @@ scenarios:
   - name: suspicious_signins
     log_type: signin_logs
     stream_name: "Custom-SigninLogDemo_CL"
-    description: "Simulate suspicious Azure AD sign-ins from risky locations"
+    description: "Simulate suspicious Entra ID sign-ins from risky locations"
     count: 50
     parameters:
       risky_locations: true
@@ -131,7 +131,7 @@ scenarios:
   - name: brute_force_aad
     log_type: signin_logs
     stream_name: "Custom-SigninLogDemo_CL"
-    description: "Simulate brute-force attacks against Azure AD accounts"
+    description: "Simulate brute-force attacks against Entra ID accounts"
     count: 30
     parameters:
       target_user: "admin@contoso.com"

@@ -219,8 +219,8 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-aad-brute-force')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Azure AD Brute Force Attack",
-        "description": "Detects multiple failed Azure AD sign-in attempts targeting the same user account, indicating a brute force attack.",
+        "displayName": "[Demo] Entra ID Brute Force Attack",
+        "description": "Detects multiple failed Entra ID sign-in attempts targeting the same user account, indicating a brute force attack.",
         "severity": "High",
         "enabled": true,
         "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize FailedAttempts = count(), SourceIPs = dcount(IPAddress), Locations = make_set(Location), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by UserPrincipalName\n| where FailedAttempts >= 5\n| project UserPrincipalName, FailedAttempts, SourceIPs, Locations, FirstAttempt, LastAttempt",
@@ -292,7 +292,7 @@
       "kind": "Scheduled",
       "properties": {
         "displayName": "[Demo] Sign-in from Risky Location",
-        "description": "Detects Azure AD sign-ins that have elevated risk levels during the sign-in process, potentially indicating compromised credentials or suspicious activity.",
+        "description": "Detects Entra ID sign-ins that have elevated risk levels during the sign-in process, potentially indicating compromised credentials or suspicious activity.",
         "severity": "Medium",
         "enabled": true,
         "query": "SigninLogDemo_CL\n| where RiskLevelDuringSignIn in (\"high\", \"medium\")\n| project TimeGenerated, UserPrincipalName, IPAddress, Location, AppDisplayName, RiskLevelDuringSignIn, RiskLevelAggregated, ResultType, ResultDescription, ClientAppUsed\n| order by TimeGenerated desc",
@@ -595,7 +595,7 @@
         "[Demo] High Volume Firewall Denies from Single Source",
         "[Demo] IDS Intrusion Alert Detected",
         "[Demo] Threat Intelligence IOC Match",
-        "[Demo] Azure AD Brute Force Attack",
+        "[Demo] Entra ID Brute Force Attack",
         "[Demo] Credential Stuffing Attack Detected",
         "[Demo] Sign-in from Risky Location",
         "[Demo] SSH Brute Force Attack on Linux",

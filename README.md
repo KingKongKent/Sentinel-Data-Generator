@@ -9,7 +9,7 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 - **Realistic security event generation** — 4 log types with 14 scenarios:
   - **Windows SecurityEvent** — brute-force attacks, privilege escalation (Event IDs 4624, 4625, 4648, 4672, 4688, 4720, 4726)
   - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler
-  - **SigninLogs** — Azure AD/Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
+  - **SigninLogs** — Microsoft Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
   - **Syslog** — Linux system events with SSH authentication, sudo abuse, service failures
 - **Live Brute Force Demo** — interactive web app where audiences try to crack a 4-digit PIN in real time, with every attempt logged to Sentinel’s `BruteForceDemo_CL` table. Includes a collapsible **"Try in Sentinel"** panel with ready-to-use Copilot prompts and KQL queries (see [brute-force-demo/](brute-force-demo/))
 - **Scenario-driven** — configure brute-force attacks, privilege escalation, anomalous sign-ins, and more via YAML
@@ -187,7 +187,7 @@ Sentinel-Data-Generator/
 │   │   ├── base.py                # BaseGenerator ABC
 │   │   ├── security_event.py      # Windows SecurityEvent generator
 │   │   ├── common_security_log.py # CEF CommonSecurityLog generator
-│   │   ├── signin_logs.py         # Azure AD/Entra ID SigninLogs generator
+│   │   ├── signin_logs.py         # Microsoft Entra ID SigninLogs generator
 │   │   └── syslog.py              # Linux Syslog generator
 │   ├── models/
 │   │   ├── __init__.py
@@ -349,7 +349,7 @@ Generates CEF-format events that ingest to the **native CommonSecurityLog table*
 
 ### SigninLogs Generator
 
-Generates Azure AD/Entra ID sign-in events for the `SigninLogDemo_CL` custom table. Supports multiple attack scenarios:
+Generates Microsoft Entra ID sign-in events for the `SigninLogDemo_CL` custom table. Supports multiple attack scenarios:
 
 | Attack Type | Description |
 |-------------|-------------|
@@ -551,7 +551,7 @@ az deployment group create \
 | Ubiquiti Port Scan | CommonSecurityLog | 10+ denied ports from same source on Ubiquiti |
 | Ubiquiti IDS Alert | CommonSecurityLog | Intrusion alert from UniFi appliance |
 | Ubiquiti Suspicious VPN | CommonSecurityLog | VPN connection from IP with prior denies/IDS alerts |
-| AAD Brute Force Attack | SigninLogDemo_CL | 10+ failed sign-ins in 5 minutes |
+| Entra ID Brute Force Attack | SigninLogDemo_CL | 10+ failed sign-ins in 5 minutes |
 | Credential Stuffing Attack | SigninLogDemo_CL | Failed logins across 5+ accounts |
 | Risky Sign-in Detected | SigninLogDemo_CL | High risk sign-in |
 | SSH Brute Force Attack | SyslogDemo_CL | 10+ SSH failures in 5 minutes |
@@ -605,7 +605,7 @@ Configure these secrets in your GitHub repository (Settings → Secrets → Acti
 |--------|-------------|
 | `AZURE_CLIENT_ID` | Service principal application (client) ID |
 | `AZURE_CLIENT_SECRET` | Service principal secret |
-| `AZURE_TENANT_ID` | Azure AD tenant ID |
+| `AZURE_TENANT_ID` | Microsoft Entra ID tenant ID |
 | `SENTINEL_DCE_ENDPOINT` | Data Collection Endpoint URL |
 | `SENTINEL_DCR_ID` | Data Collection Rule immutable ID |
 

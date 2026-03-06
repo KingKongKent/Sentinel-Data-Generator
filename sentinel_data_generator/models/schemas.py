@@ -36,7 +36,7 @@ class SecurityEvent(BaseModel):
 
 
 class SigninLog(BaseModel):
-    """Schema for Azure AD / Entra ID SigninLogs table events."""
+    """Schema for Microsoft Entra ID SigninLogs table events."""
 
     TimeGenerated: datetime.datetime = Field(..., description="Event timestamp in UTC")
     UserPrincipalName: str = Field(..., description="UPN of the signing-in user")
