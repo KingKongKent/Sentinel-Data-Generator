@@ -443,7 +443,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-port-scan')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti â€” Port Scan Detected",
+        "displayName": "[Demo] Ubiquiti — Port Scan Detected",
         "description": "Detects a single source IP hitting many destination ports through a Ubiquiti firewall, indicating network reconnaissance or port scanning activity.",
         "severity": "Medium",
         "enabled": true,
@@ -479,7 +479,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-ids-alert')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti â€” IDS Intrusion Alert",
+        "displayName": "[Demo] Ubiquiti — IDS Intrusion Alert",
         "description": "Detects intrusion detection alerts from Ubiquiti UniFi appliances. UniFi IDS alerts with high severity may indicate exploitation attempts or active attacks against the network perimeter.",
         "severity": "High",
         "enabled": true,
@@ -515,7 +515,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-vpn-anomaly')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti â€” Suspicious VPN Connection",
+        "displayName": "[Demo] Ubiquiti — Suspicious VPN Connection",
         "description": "Detects VPN connections through Ubiquiti appliances from external IPs that also triggered firewall denies or IDS alerts, indicating a potentially compromised VPN tunnel or unauthorized access.",
         "severity": "High",
         "enabled": true,
@@ -551,7 +551,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-pin-cracked')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Brute Force PIN Cracked â€” Successful Guess",
+        "displayName": "[Demo] Brute Force PIN Cracked — Successful Guess",
         "description": "Detects when a user successfully guesses the secret PIN in the live brute force demo. A successful attempt following multiple failures is a strong indicator that the code was brute-forced.",
         "severity": "High",
         "enabled": true,
@@ -601,10 +601,10 @@
         "[Demo] SSH Brute Force Attack on Linux",
         "[Demo] Suspicious Sudo Activity",
         "[Demo] Critical Service Failure Detected",
-        "[Demo] Ubiquiti â€” Port Scan Detected",
-        "[Demo] Ubiquiti â€” IDS Intrusion Alert",
-        "[Demo] Ubiquiti â€” Suspicious VPN Connection",
-        "[Demo] Brute Force PIN Cracked â€” Successful Guess"
+        "[Demo] Ubiquiti — Port Scan Detected",
+        "[Demo] Ubiquiti — IDS Intrusion Alert",
+        "[Demo] Ubiquiti — Suspicious VPN Connection",
+        "[Demo] Brute Force PIN Cracked — Successful Guess"
       ]
     }
   }
