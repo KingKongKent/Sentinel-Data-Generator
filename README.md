@@ -18,7 +18,7 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 - **Pydantic v2 validation** — all generated events are validated against strict schemas before output
 - **Configurable** — control event count, time range, random seed, and per-scenario parameters
 - **Infrastructure-as-Code** — includes Bicep templates to deploy DCE, DCR, custom tables, workbook, and analytic rules
-- **Sentinel content included** — pre-built workbook with 7 visualization tabs (including Brute Force leaderboard and “Who Cracked the PIN?” panels) and 12 detection rules
+- **Sentinel content included** — pre-built workbook with 7 visualization tabs (including Brute Force leaderboard and "Who Cracked the PIN?" panels) and 15 detection rules
 - **Extensible** — add new log types by subclassing `BaseGenerator` and registering in the engine
 
 ## Prerequisites
@@ -170,7 +170,7 @@ Sentinel-Data-Generator/
 │   ├── deploy.ps1                  # PowerShell deployment script
 │   ├── deploy.sh                   # Bash deployment script
 │   ├── workbook.json               # Sentinel workbook (7 tabs)
-│   └── analytic-rules.json         # 11 Sentinel detection rules
+│   └── analytic-rules.json         # 15 Sentinel detection rules
 ├── config/
 │   └── config.example.yaml         # Example YAML configuration
 ├── notebooks/
@@ -539,7 +539,7 @@ az deployment group create \
 
 ### Analytic Rules
 
-12 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
+15 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
 
 | Rule | Log Type | Description |
 |------|----------|-------------|
@@ -548,6 +548,9 @@ az deployment group create \
 | High Volume Firewall Denies | CommonSecurityLog | 50+ denies from same source |
 | IDS Intrusion Detected | CommonSecurityLog | Intrusion alert from IDS |
 | Threat Intel IOC Match | CommonSecurityLog | Known threat actor IP |
+| Ubiquiti Port Scan | CommonSecurityLog | 10+ denied ports from same source on Ubiquiti |
+| Ubiquiti IDS Alert | CommonSecurityLog | Intrusion alert from UniFi appliance |
+| Ubiquiti Suspicious VPN | CommonSecurityLog | VPN connection from IP with prior denies/IDS alerts |
 | AAD Brute Force Attack | SigninLogDemo_CL | 10+ failed sign-ins in 5 minutes |
 | Credential Stuffing Attack | SigninLogDemo_CL | Failed logins across 5+ accounts |
 | Risky Sign-in Detected | SigninLogDemo_CL | High risk sign-in |

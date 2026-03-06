@@ -440,6 +440,114 @@
     {
       "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
       "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-port-scan')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Ubiquiti — Port Scan Detected",
+        "description": "Detects a single source IP hitting many destination ports through a Ubiquiti firewall, indicating network reconnaissance or port scanning activity.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"deny\"\n| summarize DeniedPorts = dcount(DestinationPort), DenyCount = count(), TargetIPs = dcount(DestinationIP), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIP, DeviceProduct\n| where DeniedPorts >= 10\n| project SourceIP, DeviceProduct, DeniedPorts, DenyCount, TargetIPs, FirstSeen, LastSeen, Duration = LastSeen - FirstSeen",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["Reconnaissance", "Discovery"],
+        "techniques": ["T1046"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-ids-alert')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Ubiquiti — IDS Intrusion Alert",
+        "description": "Detects intrusion detection alerts from Ubiquiti UniFi appliances. UniFi IDS alerts with high severity may indicate exploitation attempts or active attacks against the network perimeter.",
+        "severity": "High",
+        "enabled": true,
+        "query": "CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"intrusion\"\n| summarize AlertCount = count(), Activities = make_set(Activity, 10), TargetIPs = make_set(DestinationIP, 10) by SourceIP, DeviceProduct, LogSeverity\n| where AlertCount >= 1\n| project SourceIP, DeviceProduct, LogSeverity, AlertCount, Activities, TargetIPs",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT30M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT30M",
+        "suppressionEnabled": false,
+        "tactics": ["InitialAccess", "LateralMovement"],
+        "techniques": ["T1190", "T1210"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-vpn-anomaly')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Ubiquiti — Suspicious VPN Connection",
+        "description": "Detects VPN connections through Ubiquiti appliances from external IPs that also triggered firewall denies or IDS alerts, indicating a potentially compromised VPN tunnel or unauthorized access.",
+        "severity": "High",
+        "enabled": true,
+        "query": "let VPNConnections = CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"vpn\"\n| project VPNTime = TimeGenerated, SourceIP, DestinationIP, DeviceProduct, Activity;\nlet SuspiciousIPs = CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has_any (\"deny\", \"intrusion\")\n| summarize DenyCount = count() by SourceIP\n| where DenyCount >= 3;\nVPNConnections\n| join kind=inner (SuspiciousIPs) on SourceIP\n| project VPNTime, SourceIP, DestinationIP, DeviceProduct, Activity, PriorDenies = DenyCount",
+        "queryFrequency": "PT10M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT1H",
+        "suppressionEnabled": false,
+        "tactics": ["InitialAccess", "CommandAndControl"],
+        "techniques": ["T1133", "T1571"],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [{ "identifier": "Address", "columnName": "SourceIP" }]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-pin-cracked')]",
       "kind": "Scheduled",
       "properties": {
@@ -493,6 +601,9 @@
         "[Demo] SSH Brute Force Attack on Linux",
         "[Demo] Suspicious Sudo Activity",
         "[Demo] Critical Service Failure Detected",
+        "[Demo] Ubiquiti — Port Scan Detected",
+        "[Demo] Ubiquiti — IDS Intrusion Alert",
+        "[Demo] Ubiquiti — Suspicious VPN Connection",
         "[Demo] Brute Force PIN Cracked — Successful Guess"
       ]
     }
