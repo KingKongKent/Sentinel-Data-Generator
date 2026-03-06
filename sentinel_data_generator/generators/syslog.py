@@ -352,9 +352,25 @@ class SyslogGenerator(BaseGenerator):
         attacker_ip: str | None = None,
     ) -> dict[str, Any]:
         """Generate a single Syslog event."""
-        # Select host
+        # Select host — use a consistent IP for a given hostname so that
+        # analytic rules that group by (Computer, HostIP) can aggregate
+        # multiple events from the same server.
         if target_host:
-            host = {"hostname": target_host, "ip": self.faker.ipv4_private(), "type": "server"}
+            # Look up the target host in the known hosts list first
+            known = next(
+                (h for h in SAMPLE_HOSTS if h["hostname"] == target_host),
+                None,
+            )
+            if known:
+                host = known
+            else:
+                # Deterministic IP derived from hostname so it stays consistent
+                host_hash = hash(target_host) % 256
+                host = {
+                    "hostname": target_host,
+                    "ip": f"10.99.0.{host_hash}",
+                    "type": "server",
+                }
         else:
             host = random.choice(SAMPLE_HOSTS)
 
