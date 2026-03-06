@@ -88,6 +88,35 @@ scenarios:
     parameters:
       vendor: "Ubiquiti"
 
+  - name: firewall_deny_scan
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate high-volume firewall denies from single attacker"
+    count: 60
+    parameters:
+      vendor: "Palo Alto Networks"
+      event_type: "firewall_deny"
+      source_ip: "198.51.100.50"
+
+  - name: ubiquiti_port_scan
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate Ubiquiti port scan — high-volume denies from single source"
+    count: 30
+    parameters:
+      vendor: "Ubiquiti"
+      event_type: "firewall_deny"
+      source_ip: "203.0.113.55"
+
+  - name: ubiquiti_ids_vpn
+    log_type: common_security_log_native
+    stream_name: "Custom-CommonSecurityLogNative"
+    description: "Simulate Ubiquiti IDS alerts and VPN connections from threat actor"
+    count: 30
+    parameters:
+      vendor: "Ubiquiti"
+      source_ip: "203.0.113.55"
+
   # SigninLogs scenarios - ingest to custom SigninLogDemo_CL table
   # (Native SigninLogs table is protected - only Entra ID can write to it)
   - name: suspicious_signins
@@ -125,20 +154,23 @@ scenarios:
     count: 80
     parameters:
       event_type: "ssh_failure"
+      target_host: "web-server-01.contoso.local"
       attacker_ip: "203.0.113.100"
 
-  - name: linux_auth_events
+  - name: linux_sudo_abuse
     log_type: syslog
     stream_name: "Custom-SyslogDemo_CL"
-    description: "Simulate mixed Linux authentication events"
-    count: 50
+    description: "Simulate failed sudo attempts and privilege escalation"
+    count: 40
     parameters:
-      event_type: "sudo_success"
+      event_type: "sudo_failure"
+      target_host: "app-server-01.contoso.local"
 
   - name: service_anomalies
     log_type: syslog
     stream_name: "Custom-SyslogDemo_CL"
     description: "Simulate service start/stop and failure events"
-    count: 30
+    count: 40
     parameters:
       event_type: "service_failure"
+      target_host: "app-server-01.contoso.local"

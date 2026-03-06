@@ -55,12 +55,12 @@ EVENT_CLASSES: dict[str, dict[str, Any]] = {
         "activity": "Firewall session denied",
         "severity": "5",
         "protocols": ["TCP", "UDP"],
-        "dest_ports": [22, 3389, 445, 135, 139, 1433, 3306, 5432],
+        "dest_ports": [21, 22, 23, 25, 80, 135, 139, 443, 445, 993, 1433, 3306, 3389, 5432, 5900, 8080],
     },
     "ids_alert": {
         "class_id": "intrusion:detected",
         "activity": "Intrusion attempt detected",
-        "severity": "8",
+        "severity": "9",
         "protocols": ["TCP", "UDP"],
         "dest_ports": [80, 443, 8080, 22, 445],
     },
@@ -86,7 +86,7 @@ EVENT_CLASSES: dict[str, dict[str, Any]] = {
         "dest_ports": [443, 500, 4500, 1194],
     },
     "threat_intelligence": {
-        "class_id": "threat:match",
+        "class_id": "threatintel:match",
         "activity": "Threat intelligence IOC match",
         "severity": "10",
         "protocols": ["TCP", "UDP"],

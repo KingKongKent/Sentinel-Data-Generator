@@ -6,7 +6,7 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 
 ## Features
 
-- **Realistic security event generation** — 4 log types with 12 scenarios:
+- **Realistic security event generation** — 4 log types with 14 scenarios:
   - **Windows SecurityEvent** — brute-force attacks, privilege escalation (Event IDs 4624, 4625, 4648, 4672, 4688, 4720, 4726)
   - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler
   - **SigninLogs** — Azure AD/Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
