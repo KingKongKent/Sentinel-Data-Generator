@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -24,12 +24,12 @@
         "severity": "High",
         "enabled": true,
         "query": "SecurityEventDemo_CL\n| where EventID == 4625\n| summarize FailedAttempts = count(), TargetAccounts = dcount(Account), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by IpAddress, Computer\n| where FailedAttempts >= 5\n| extend Duration = LastAttempt - FirstAttempt\n| project IpAddress, Computer, FailedAttempts, TargetAccounts, FirstAttempt, LastAttempt, Duration",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["CredentialAccess", "InitialAccess"],
         "techniques": ["T1110"],
         "entityMappings": [
@@ -47,7 +47,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -64,12 +64,12 @@
         "severity": "High",
         "enabled": true,
         "query": "let NewAccounts = SecurityEventDemo_CL\n| where EventID == 4720\n| project AccountCreated = Account, CreatedTime = TimeGenerated, Computer;\nlet SpecialLogons = SecurityEventDemo_CL\n| where EventID == 4672\n| project Account, PrivilegeTime = TimeGenerated, Computer;\nNewAccounts\n| join kind=inner (SpecialLogons) on $left.AccountCreated == $right.Account, Computer\n| where PrivilegeTime between (CreatedTime .. (CreatedTime + 1h))\n| project AccountCreated, Computer, CreatedTime, PrivilegeTime, TimeDelta = PrivilegeTime - CreatedTime",
-        "queryFrequency": "PT15M",
-        "queryPeriod": "PT2H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["PrivilegeEscalation", "Persistence"],
         "techniques": ["T1078", "T1136"],
         "entityMappings": [
@@ -87,7 +87,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -104,12 +104,12 @@
         "severity": "Medium",
         "enabled": true,
         "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"deny\", \"block\", \"drop\")\n| summarize DenyCount = count(), TargetIPs = dcount(DestinationIP), TargetPorts = dcount(DestinationPort) by SourceIP, DeviceVendor, DeviceProduct\n| where DenyCount >= 50\n| project SourceIP, DeviceVendor, DeviceProduct, DenyCount, TargetIPs, TargetPorts",
-        "queryFrequency": "PT10M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["Reconnaissance", "Discovery"],
         "techniques": ["T1046", "T1595"],
         "entityMappings": [
@@ -123,7 +123,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -140,12 +140,12 @@
         "severity": "High",
         "enabled": true,
         "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"intrusion\", \"ids\", \"ips\", \"attack\")\n| where LogSeverity in (\"High\", \"Critical\", \"9\", \"10\")\n| summarize AlertCount = count(), Activities = make_set(Activity) by SourceIP, DestinationIP, DeviceVendor, DeviceProduct\n| where AlertCount >= 1\n| project SourceIP, DestinationIP, DeviceVendor, DeviceProduct, AlertCount, Activities",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT30M",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT30M",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["InitialAccess", "Execution", "LateralMovement"],
         "techniques": ["T1190", "T1210"],
         "entityMappings": [
@@ -163,7 +163,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -180,12 +180,12 @@
         "severity": "High",
         "enabled": true,
         "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"threatintel\", \"ioc\", \"malware\", \"c2\", \"command\")\n| project TimeGenerated, SourceIP, DestinationIP, Activity, DeviceVendor, DeviceProduct, LogSeverity, RequestURL\n| extend ThreatIndicator = coalesce(RequestURL, DestinationIP)",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT30M",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT30M",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["CommandAndControl", "Exfiltration"],
         "techniques": ["T1071", "T1041"],
         "entityMappings": [
@@ -207,7 +207,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -224,12 +224,12 @@
         "severity": "High",
         "enabled": true,
         "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize FailedAttempts = count(), SourceIPs = dcount(IPAddress), Locations = make_set(Location), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by UserPrincipalName\n| where FailedAttempts >= 5\n| project UserPrincipalName, FailedAttempts, SourceIPs, Locations, FirstAttempt, LastAttempt",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["CredentialAccess", "InitialAccess"],
         "techniques": ["T1110"],
         "entityMappings": [
@@ -243,7 +243,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -260,12 +260,12 @@
         "severity": "High",
         "enabled": true,
         "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize TargetedUsers = dcount(UserPrincipalName), FailedAttempts = count(), UserList = make_set(UserPrincipalName, 10) by IPAddress, Location\n| where TargetedUsers >= 3 and FailedAttempts >= 5\n| project IPAddress, Location, TargetedUsers, FailedAttempts, UserList",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["CredentialAccess", "InitialAccess"],
         "techniques": ["T1110"],
         "entityMappings": [
@@ -279,7 +279,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -296,12 +296,12 @@
         "severity": "Medium",
         "enabled": true,
         "query": "SigninLogDemo_CL\n| where RiskLevelDuringSignIn in (\"high\", \"medium\")\n| project TimeGenerated, UserPrincipalName, IPAddress, Location, AppDisplayName, RiskLevelDuringSignIn, RiskLevelAggregated, ResultType, ResultDescription, ClientAppUsed\n| order by TimeGenerated desc",
-        "queryFrequency": "PT10M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["InitialAccess"],
         "techniques": ["T1078"],
         "entityMappings": [
@@ -319,7 +319,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -336,12 +336,12 @@
         "severity": "High",
         "enabled": true,
         "query": "SyslogDemo_CL\n| where ProcessName == \"sshd\" and SyslogMessage has \"Failed\"\n| summarize FailedAttempts = count(), TargetHosts = dcount(Computer), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by HostIP\n| where FailedAttempts >= 5\n| project HostIP, FailedAttempts, TargetHosts, FirstAttempt, LastAttempt, Duration = LastAttempt - FirstAttempt",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["CredentialAccess", "InitialAccess"],
         "techniques": ["T1110"],
         "entityMappings": [
@@ -355,7 +355,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -372,12 +372,12 @@
         "severity": "Medium",
         "enabled": true,
         "query": "SyslogDemo_CL\n| where ProcessName == \"sudo\" and SyslogMessage has_any (\"authentication failure\", \"NOT in sudoers\", \"incorrect password\")\n| summarize FailedSudoAttempts = count(), Commands = make_set(SyslogMessage, 5) by Computer, HostIP\n| where FailedSudoAttempts >= 3\n| project Computer, HostIP, FailedSudoAttempts, Commands",
-        "queryFrequency": "PT10M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["PrivilegeEscalation"],
         "techniques": ["T1548"],
         "entityMappings": [
@@ -395,7 +395,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -412,12 +412,12 @@
         "severity": "Medium",
         "enabled": true,
         "query": "SyslogDemo_CL\n| where SeverityLevel in (\"err\", \"crit\", \"alert\", \"emerg\")\n| where SyslogMessage has_any (\"failed\", \"error\", \"crash\", \"stopped\", \"killed\")\n| summarize ErrorCount = count(), Services = make_set(ProcessName, 10), Messages = make_set(SyslogMessage, 5) by Computer, SeverityLevel\n| where ErrorCount >= 2\n| project Computer, SeverityLevel, ErrorCount, Services, Messages",
-        "queryFrequency": "PT10M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["Impact"],
         "techniques": ["T1489"],
         "entityMappings": [
@@ -431,7 +431,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -443,17 +443,17 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-port-scan')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti — Port Scan Detected",
+        "displayName": "[Demo] Ubiquiti â€” Port Scan Detected",
         "description": "Detects a single source IP hitting many destination ports through a Ubiquiti firewall, indicating network reconnaissance or port scanning activity.",
         "severity": "Medium",
         "enabled": true,
         "query": "CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"deny\"\n| summarize DeniedPorts = dcount(DestinationPort), DenyCount = count(), TargetIPs = dcount(DestinationIP), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIP, DeviceProduct\n| where DeniedPorts >= 10\n| project SourceIP, DeviceProduct, DeniedPorts, DenyCount, TargetIPs, FirstSeen, LastSeen, Duration = LastSeen - FirstSeen",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["Reconnaissance", "Discovery"],
         "techniques": ["T1046"],
         "entityMappings": [
@@ -467,7 +467,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -479,17 +479,17 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-ids-alert')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti — IDS Intrusion Alert",
+        "displayName": "[Demo] Ubiquiti â€” IDS Intrusion Alert",
         "description": "Detects intrusion detection alerts from Ubiquiti UniFi appliances. UniFi IDS alerts with high severity may indicate exploitation attempts or active attacks against the network perimeter.",
         "severity": "High",
         "enabled": true,
         "query": "CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"intrusion\"\n| summarize AlertCount = count(), Activities = make_set(Activity, 10), TargetIPs = make_set(DestinationIP, 10) by SourceIP, DeviceProduct, LogSeverity\n| where AlertCount >= 1\n| project SourceIP, DeviceProduct, LogSeverity, AlertCount, Activities, TargetIPs",
-        "queryFrequency": "PT5M",
-        "queryPeriod": "PT30M",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT30M",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["InitialAccess", "LateralMovement"],
         "techniques": ["T1190", "T1210"],
         "entityMappings": [
@@ -503,7 +503,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -515,17 +515,17 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-vpn-anomaly')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti — Suspicious VPN Connection",
+        "displayName": "[Demo] Ubiquiti â€” Suspicious VPN Connection",
         "description": "Detects VPN connections through Ubiquiti appliances from external IPs that also triggered firewall denies or IDS alerts, indicating a potentially compromised VPN tunnel or unauthorized access.",
         "severity": "High",
         "enabled": true,
         "query": "let VPNConnections = CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"vpn\"\n| project VPNTime = TimeGenerated, SourceIP, DestinationIP, DeviceProduct, Activity;\nlet SuspiciousIPs = CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has_any (\"deny\", \"intrusion\")\n| summarize DenyCount = count() by SourceIP\n| where DenyCount >= 3;\nVPNConnections\n| join kind=inner (SuspiciousIPs) on SourceIP\n| project VPNTime, SourceIP, DestinationIP, DeviceProduct, Activity, PriorDenies = DenyCount",
-        "queryFrequency": "PT10M",
-        "queryPeriod": "PT1H",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
-        "suppressionDuration": "PT1H",
-        "suppressionEnabled": false,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
         "tactics": ["InitialAccess", "CommandAndControl"],
         "techniques": ["T1133", "T1571"],
         "entityMappings": [
@@ -539,7 +539,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT5H",
+            "lookbackDuration": "PT6H",
             "matchingMethod": "AllEntities"
           }
         }
@@ -551,7 +551,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-pin-cracked')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Brute Force PIN Cracked — Successful Guess",
+        "displayName": "[Demo] Brute Force PIN Cracked â€” Successful Guess",
         "description": "Detects when a user successfully guesses the secret PIN in the live brute force demo. A successful attempt following multiple failures is a strong indicator that the code was brute-forced.",
         "severity": "High",
         "enabled": true,
@@ -561,7 +561,7 @@
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 0,
         "suppressionDuration": "PT30M",
-        "suppressionEnabled": false,
+        "suppressionEnabled": true,
         "tactics": ["CredentialAccess", "InitialAccess"],
         "techniques": ["T1110"],
         "entityMappings": [
@@ -601,10 +601,10 @@
         "[Demo] SSH Brute Force Attack on Linux",
         "[Demo] Suspicious Sudo Activity",
         "[Demo] Critical Service Failure Detected",
-        "[Demo] Ubiquiti — Port Scan Detected",
-        "[Demo] Ubiquiti — IDS Intrusion Alert",
-        "[Demo] Ubiquiti — Suspicious VPN Connection",
-        "[Demo] Brute Force PIN Cracked — Successful Guess"
+        "[Demo] Ubiquiti â€” Port Scan Detected",
+        "[Demo] Ubiquiti â€” IDS Intrusion Alert",
+        "[Demo] Ubiquiti â€” Suspicious VPN Connection",
+        "[Demo] Brute Force PIN Cracked â€” Successful Guess"
       ]
     }
   }
