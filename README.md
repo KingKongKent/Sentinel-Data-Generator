@@ -419,6 +419,73 @@ Or override the Bicep parameter at deploy time with `--parameters secretPin=4242
 
 Full setup, deployment, PIN configuration, and presenter workflow instructions are in the [brute-force-demo/README.md](brute-force-demo/README.md).
 
+## Sign-in Log Demo — MCP Tools for Copilot
+
+Three custom **MCP (Model Context Protocol) tools** are available for querying the `SigninLogDemo_CL` table interactively via GitHub Copilot or any MCP-compatible agent. These are ideal for live demos where you want Copilot to analyze sign-in telemetry in real time.
+
+### Available Tools
+
+| Tool | Description | Key Columns |
+|------|-------------|-------------|
+| **SigninDemo_LocationRiskSummary** | Sign-in risk summary by geographic location | Location, TotalSignIns, FailedSignIns, HighRiskSignIns, Users, Apps, IPs |
+| **SigninDemo_SuspiciousIPs** | Suspicious IP addresses ranked by failure volume and risk events | IPAddress, Total, Failed, RiskEvents, Users, Apps, Locations |
+| **SigninDemo_CA_Failures** | Conditional Access failures by user and error code | UserPrincipalName, ResultType, ResultDescription, Failures, Apps, IPs |
+
+### Setup
+
+Add the SigninDemo MCP server to your VS Code `mcp.json` (File → Preferences → MCP Settings) pointing to your Log Analytics workspace ID.
+
+### Suggested Prompts — Natural Language (Security Copilot)
+
+| # | Prompt |
+|---|--------|
+| 1 | "Which locations have the most failed and risky sign-ins?" |
+| 2 | "Are there any sign-in attempts from sanctioned countries like North Korea or Iran?" |
+| 3 | "Which user accounts are being targeted with invalid password attempts?" |
+| 4 | "Show me the most suspicious IP addresses based on failure volume and risk signals" |
+| 5 | "Is the admin account under a brute-force attack? Summarize the sign-in failures" |
+| 6 | "Which applications are being targeted from high-risk locations?" |
+
+### Suggested Prompts — Investigative Follow-up
+
+| # | Prompt |
+|---|--------|
+| 7 | "The CEO account has hundreds of failed password attempts — which IPs are behind this?" |
+| 8 | "Compare sign-in risk between Beijing and Pyongyang — which is worse?" |
+| 9 | "Are there IPs that appear across multiple high-risk countries?" |
+| 10 | "Which service accounts have conditional access failures?" |
+
+### KQL Queries for `SigninLogDemo_CL`
+
+**Top 10 riskiest locations:**
+
+```kql
+SigninLogDemo_CL
+| where ResultType != "0"
+| summarize Failures=count(), Users=dcount(UserPrincipalName) by Location
+| top 10 by Failures desc
+```
+
+**Accounts under password spray attack:**
+
+```kql
+SigninLogDemo_CL
+| where ResultDescription == "Invalid username or password"
+| summarize Attempts=count(), SourceIPs=dcount(IPAddress) by UserPrincipalName
+| where Attempts > 100
+| order by Attempts desc
+```
+
+**Suspicious IPs hitting multiple users:**
+
+```kql
+SigninLogDemo_CL
+| where ResultType != "0"
+| summarize Failures=count(), TargetUsers=dcount(UserPrincipalName), Locations=make_set(Location) by IPAddress
+| where TargetUsers > 3
+| order by Failures desc
+```
+
 ## Sentinel Content
 
 Pre-built Sentinel content is included for immediate use with the generated demo data.
