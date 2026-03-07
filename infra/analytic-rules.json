@@ -23,7 +23,7 @@
         "description": "Detects multiple failed logon attempts (Event ID 4625) from the same source IP within a short time window, indicating a potential brute force attack against Windows systems.",
         "severity": "High",
         "enabled": true,
-        "query": "SecurityEventDemo_CL\n| where EventID == 4625\n| summarize FailedAttempts = count(), TargetAccounts = dcount(Account), TopAccount = take_any(Account), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by IpAddress, Computer\n| where FailedAttempts >= 5\n| extend Duration = LastAttempt - FirstAttempt\n| project IpAddress, Computer, TopAccount, FailedAttempts, TargetAccounts, FirstAttempt, LastAttempt, Duration",
+        "query": "SecurityEventDemo_CL\n| where EventID == 4625\n| summarize FailedAttempts = count(), TargetAccounts = dcount(Account), TopAccount = take_any(Account), TopActivity = take_any(Activity), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by IpAddress, Computer\n| where FailedAttempts >= 5\n| extend Duration = LastAttempt - FirstAttempt\n| project IpAddress, Computer, TopAccount, FailedAttempts, TargetAccounts, TopActivity, FirstAttempt, LastAttempt, Duration",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -81,6 +81,12 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "TargetAccounts": "TargetAccounts",
+          "FailedAttempts": "FailedAttempts",
+          "Activity": "TopActivity",
+          "Duration": "Duration"
         }
       }
     },
@@ -143,6 +149,9 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "TimeDelta": "TimeDelta"
         }
       }
     },
@@ -156,7 +165,7 @@
         "description": "Detects when a single source IP generates a high volume of firewall deny events, indicating potential reconnaissance or attack activity.",
         "severity": "Medium",
         "enabled": true,
-        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"deny\", \"block\", \"drop\")\n| summarize DenyCount = count(), TargetIPs = dcount(DestinationIP), TargetPorts = dcount(DestinationPort) by SourceIP, DeviceVendor, DeviceProduct\n| where DenyCount >= 50\n| project SourceIP, DeviceVendor, DeviceProduct, DenyCount, TargetIPs, TargetPorts",
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"deny\", \"block\", \"drop\")\n| summarize DenyCount = count(), TargetIPs = dcount(DestinationIP), TopTargetIP = take_any(DestinationIP), TargetPorts = dcount(DestinationPort), TopPort = take_any(DestinationPort) by SourceIP, DeviceVendor, DeviceProduct\n| where DenyCount >= 50\n| project SourceIP, TopTargetIP, DeviceVendor, DeviceProduct, DenyCount, TargetIPs, TargetPorts, TopPort",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -180,6 +189,15 @@
                 "columnName": "SourceIP"
               }
             ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopTargetIP"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -195,6 +213,14 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "DeviceVendor": "DeviceVendor",
+          "DeviceProduct": "DeviceProduct",
+          "DenyCount": "DenyCount",
+          "TargetIPs": "TargetIPs",
+          "TargetPorts": "TargetPorts",
+          "TopPort": "TopPort"
         }
       }
     },
@@ -208,7 +234,7 @@
         "description": "Detects high and critical severity IDS alerts that may indicate active intrusion attempts or successful compromise.",
         "severity": "High",
         "enabled": true,
-        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"intrusion\", \"ids\", \"ips\", \"attack\")\n| where toint(LogSeverity) >= 8 or LogSeverity in (\"High\", \"Critical\")\n| summarize AlertCount = count(), Activities = make_set(Activity) by SourceIP, DestinationIP, DeviceVendor, DeviceProduct\n| where AlertCount >= 1\n| project SourceIP, DestinationIP, DeviceVendor, DeviceProduct, AlertCount, Activities",
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"intrusion\", \"ids\", \"ips\", \"attack\")\n| where toint(LogSeverity) >= 8 or LogSeverity in (\"High\", \"Critical\")\n| summarize AlertCount = count(), Activities = make_set(Activity) by SourceIP, DestinationIP, DeviceVendor, DeviceProduct, LogSeverity\n| where AlertCount >= 1\n| project SourceIP, DestinationIP, DeviceVendor, DeviceProduct, LogSeverity, AlertCount, Activities",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -257,6 +283,13 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "DeviceVendor": "DeviceVendor",
+          "DeviceProduct": "DeviceProduct",
+          "Severity": "LogSeverity",
+          "AlertCount": "AlertCount",
+          "Activities": "Activities"
         }
       }
     },
@@ -270,7 +303,7 @@
         "description": "Detects when network traffic matches known threat intelligence indicators, suggesting communication with malicious infrastructure.",
         "severity": "High",
         "enabled": true,
-        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"threatintel\", \"ioc\", \"malware\", \"c2\", \"command\")\n| project TimeGenerated, SourceIP, DestinationIP, Activity, DeviceVendor, DeviceProduct, LogSeverity, RequestURL\n| extend ThreatIndicator = coalesce(RequestURL, DestinationIP)",
+        "query": "CommonSecurityLog\n| where DeviceEventClassID has_any (\"threatintel\", \"ioc\", \"malware\", \"c2\", \"command\")\n| project TimeGenerated, SourceIP, DestinationIP, Activity, DeviceVendor, DeviceProduct, LogSeverity, RequestURL, Protocol, DestinationPort\n| extend ThreatIndicator = coalesce(RequestURL, DestinationIP)",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -328,6 +361,14 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "DeviceVendor": "DeviceVendor",
+          "DeviceProduct": "DeviceProduct",
+          "ThreatIndicator": "ThreatIndicator",
+          "Activity": "Activity",
+          "Protocol": "Protocol",
+          "DestinationPort": "DestinationPort"
         }
       }
     },
@@ -341,7 +382,7 @@
         "description": "Detects multiple failed Entra ID sign-in attempts targeting the same user account, indicating a brute force attack.",
         "severity": "High",
         "enabled": true,
-        "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize FailedAttempts = count(), SourceIPs = dcount(IPAddress), TopSourceIP = take_any(IPAddress), Locations = make_set(Location), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by UserPrincipalName\n| where FailedAttempts >= 5\n| project UserPrincipalName, TopSourceIP, FailedAttempts, SourceIPs, Locations, FirstAttempt, LastAttempt",
+        "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize FailedAttempts = count(), SourceIPs = dcount(IPAddress), TopSourceIP = take_any(IPAddress), Locations = make_set(Location), TopApp = take_any(AppDisplayName), Apps = make_set(AppDisplayName), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by UserPrincipalName\n| where FailedAttempts >= 5\n| project UserPrincipalName, TopSourceIP, TopApp, FailedAttempts, SourceIPs, Apps, Locations, FirstAttempt, LastAttempt",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -389,6 +430,13 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "FailedAttempts": "FailedAttempts",
+          "SourceIPs": "SourceIPs",
+          "TargetApp": "TopApp",
+          "AllApps": "Apps",
+          "Locations": "Locations"
         }
       }
     },
@@ -402,7 +450,7 @@
         "description": "Detects when multiple user accounts experience failed sign-ins from the same IP address, indicating a credential stuffing attack using leaked credentials.",
         "severity": "High",
         "enabled": true,
-        "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize TargetedUsers = dcount(UserPrincipalName), FailedAttempts = count(), UserList = make_set(UserPrincipalName, 10) by IPAddress, Location\n| where TargetedUsers >= 3 and FailedAttempts >= 5\n| project IPAddress, Location, TargetedUsers, FailedAttempts, UserList",
+        "query": "SigninLogDemo_CL\n| where ResultType != \"0\"\n| summarize TargetedUsers = dcount(UserPrincipalName), FailedAttempts = count(), TopUser = take_any(UserPrincipalName), UserList = make_set(UserPrincipalName, 10), TopApp = take_any(AppDisplayName), Apps = make_set(AppDisplayName) by IPAddress, Location\n| where TargetedUsers >= 3 and FailedAttempts >= 5\n| project IPAddress, Location, TopUser, TopApp, TargetedUsers, FailedAttempts, UserList, Apps",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -425,6 +473,24 @@
                 "columnName": "IPAddress"
               }
             ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopUser"
+              }
+            ]
+          },
+          {
+            "entityType": "CloudApplication",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopApp"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -435,11 +501,20 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
+              "Account",
+              "CloudApplication",
               "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "TargetedUsers": "TargetedUsers",
+          "FailedAttempts": "FailedAttempts",
+          "Location": "Location",
+          "UserList": "UserList",
+          "AllApps": "Apps"
         }
       }
     },
@@ -484,6 +559,15 @@
                 "columnName": "IPAddress"
               }
             ]
+          },
+          {
+            "entityType": "CloudApplication",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "AppDisplayName"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -495,11 +579,19 @@
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
+              "CloudApplication",
               "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "Location": "Location",
+          "RiskLevel": "RiskLevelDuringSignIn",
+          "AggregatedRisk": "RiskLevelAggregated",
+          "ClientApp": "ClientAppUsed",
+          "Result": "ResultDescription"
         }
       }
     },
@@ -513,7 +605,7 @@
         "description": "Detects multiple failed SSH authentication attempts from the same source IP, indicating a brute force attack against Linux systems.",
         "severity": "High",
         "enabled": true,
-        "query": "SyslogDemo_CL\n| where ProcessName == \"sshd\" and SyslogMessage has \"Failed\"\n| summarize FailedAttempts = count(), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by Computer, HostIP\n| where FailedAttempts >= 5\n| project Computer, HostIP, FailedAttempts, FirstAttempt, LastAttempt, Duration = LastAttempt - FirstAttempt",
+        "query": "SyslogDemo_CL\n| where ProcessName == \"sshd\" and SyslogMessage has \"Failed\"\n| parse SyslogMessage with * \"for \" TargetUser \" from\" *\n| parse SyslogMessage with * \"from \" AttackerIP \" port\" *\n| summarize FailedAttempts = count(), TopAttackerIP = take_any(AttackerIP), TopTargetUser = take_any(TargetUser), TargetUsers = dcount(TargetUser), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by Computer, HostIP\n| where FailedAttempts >= 5\n| project Computer, HostIP, TopAttackerIP, TopTargetUser, TargetUsers, FailedAttempts, FirstAttempt, LastAttempt, Duration = LastAttempt - FirstAttempt",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -528,6 +620,15 @@
           "T1110"
         ],
         "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopAttackerIP"
+              }
+            ]
+          },
           {
             "entityType": "Host",
             "fieldMappings": [
@@ -545,6 +646,15 @@
                 "columnName": "HostIP"
               }
             ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopTargetUser"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -555,12 +665,18 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
+              "Account",
               "Host",
               "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "FailedAttempts": "FailedAttempts",
+          "TargetUsers": "TargetUsers",
+          "Duration": "Duration"
         }
       }
     },
@@ -574,7 +690,7 @@
         "description": "Detects failed sudo attempts or unusual sudo command patterns that may indicate privilege escalation attempts on Linux systems.",
         "severity": "Medium",
         "enabled": true,
-        "query": "SyslogDemo_CL\n| where ProcessName == \"sudo\" and SyslogMessage has_any (\"authentication failure\", \"NOT in sudoers\", \"incorrect password\")\n| summarize FailedSudoAttempts = count(), Commands = make_set(SyslogMessage, 5) by Computer, HostIP\n| where FailedSudoAttempts >= 3\n| project Computer, HostIP, FailedSudoAttempts, Commands",
+        "query": "SyslogDemo_CL\n| where ProcessName == \"sudo\" and SyslogMessage has_any (\"authentication failure\", \"NOT in sudoers\", \"incorrect password\")\n| parse SyslogMessage with SudoUser \" : \" *\n| summarize FailedSudoAttempts = count(), TopUser = take_any(SudoUser), Users = make_set(SudoUser), Commands = make_set(SyslogMessage, 5) by Computer, HostIP\n| where FailedSudoAttempts >= 3\n| project Computer, HostIP, TopUser, Users, FailedSudoAttempts, Commands",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -605,6 +721,15 @@
                 "columnName": "HostIP"
               }
             ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopUser"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -615,12 +740,18 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
+              "Account",
               "Host",
               "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "SudoAttempts": "FailedSudoAttempts",
+          "AllUsers": "Users",
+          "Commands": "Commands"
         }
       }
     },
@@ -634,7 +765,7 @@
         "description": "Detects critical service failures on Linux systems that may indicate system instability, attacks, or misconfigurations.",
         "severity": "Medium",
         "enabled": true,
-        "query": "SyslogDemo_CL\n| where SeverityLevel in (\"err\", \"crit\", \"alert\", \"emerg\")\n| where SyslogMessage has_any (\"failed\", \"error\", \"crash\", \"stopped\", \"killed\")\n| summarize ErrorCount = count(), Services = make_set(ProcessName, 10), Messages = make_set(SyslogMessage, 5) by Computer, SeverityLevel\n| where ErrorCount >= 2\n| project Computer, SeverityLevel, ErrorCount, Services, Messages",
+        "query": "SyslogDemo_CL\n| where SeverityLevel in (\"err\", \"crit\", \"alert\", \"emerg\")\n| where SyslogMessage has_any (\"failed\", \"error\", \"crash\", \"stopped\", \"killed\")\n| summarize ErrorCount = count(), Services = make_set(ProcessName, 10), Messages = make_set(SyslogMessage, 5), TopHostIP = take_any(HostIP) by Computer, SeverityLevel\n| where ErrorCount >= 2\n| project Computer, TopHostIP, SeverityLevel, ErrorCount, Services, Messages",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -656,6 +787,15 @@
                 "columnName": "Computer"
               }
             ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopHostIP"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -666,11 +806,18 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
-              "Host"
+              "Host",
+              "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "Severity": "SeverityLevel",
+          "ErrorCount": "ErrorCount",
+          "Services": "Services",
+          "Messages": "Messages"
         }
       }
     },
@@ -684,7 +831,7 @@
         "description": "Detects a single source IP hitting many destination ports through a Ubiquiti firewall, indicating network reconnaissance or port scanning activity.",
         "severity": "Medium",
         "enabled": true,
-        "query": "CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"deny\"\n| summarize DeniedPorts = dcount(DestinationPort), DenyCount = count(), TargetIPs = dcount(DestinationIP), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIP, DeviceProduct\n| where DeniedPorts >= 10\n| project SourceIP, DeviceProduct, DeniedPorts, DenyCount, TargetIPs, FirstSeen, LastSeen, Duration = LastSeen - FirstSeen",
+        "query": "CommonSecurityLog\n| where DeviceVendor == \"Ubiquiti\"\n| where DeviceEventClassID has \"deny\"\n| summarize DeniedPorts = dcount(DestinationPort), DenyCount = count(), TargetIPs = dcount(DestinationIP), TopTargetIP = take_any(DestinationIP), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIP, DeviceProduct\n| where DeniedPorts >= 10\n| project SourceIP, TopTargetIP, DeviceProduct, DeniedPorts, DenyCount, TargetIPs, FirstSeen, LastSeen, Duration = LastSeen - FirstSeen",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -707,6 +854,15 @@
                 "columnName": "SourceIP"
               }
             ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopTargetIP"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -722,6 +878,13 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "DeviceProduct": "DeviceProduct",
+          "DeniedPorts": "DeniedPorts",
+          "DenyCount": "DenyCount",
+          "TargetIPs": "TargetIPs",
+          "Duration": "Duration"
         }
       }
     },
@@ -783,6 +946,13 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "DeviceProduct": "DeviceProduct",
+          "Severity": "LogSeverity",
+          "AlertCount": "AlertCount",
+          "Activities": "Activities",
+          "TargetIPs": "TargetIPs"
         }
       }
     },
@@ -844,6 +1014,11 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "DeviceProduct": "DeviceProduct",
+          "Activity": "Activity",
+          "PriorDenies": "PriorDenies"
         }
       }
     },
@@ -905,6 +1080,12 @@
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
+        },
+        "customDetails": {
+          "Pincode": "Pincode",
+          "FailedAttempts": "FailedAttempts",
+          "TimeToSuccess": "TimeToSuccess",
+          "UserAgent": "UserAgent"
         }
       }
     }
