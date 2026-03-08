@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -827,7 +827,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-port-scan')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti \u2014 Port Scan Detected",
+        "displayName": "[Demo] Ubiquiti — Port Scan Detected",
         "description": "Detects a single source IP hitting many destination ports through a Ubiquiti firewall, indicating network reconnaissance or port scanning activity.",
         "severity": "Medium",
         "enabled": true,
@@ -894,7 +894,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-ids-alert')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti \u2014 IDS Intrusion Alert",
+        "displayName": "[Demo] Ubiquiti — IDS Intrusion Alert",
         "description": "Detects intrusion detection alerts from Ubiquiti UniFi appliances. UniFi IDS alerts with high severity may indicate exploitation attempts or active attacks against the network perimeter.",
         "severity": "High",
         "enabled": true,
@@ -962,7 +962,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-vpn-anomaly')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti \u2014 Suspicious VPN Connection",
+        "displayName": "[Demo] Ubiquiti — Suspicious VPN Connection",
         "description": "Detects VPN connections through Ubiquiti appliances from external IPs that also triggered firewall denies or IDS alerts, indicating a potentially compromised VPN tunnel or unauthorized access.",
         "severity": "High",
         "enabled": true,
@@ -1028,7 +1028,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-pin-cracked')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Brute Force PIN Cracked \u2014 Successful Guess",
+        "displayName": "[Demo] Brute Force PIN Cracked — Successful Guess",
         "description": "Detects when a user successfully guesses the secret PIN in the live brute force demo. A successful attempt following multiple failures is a strong indicator that the code was brute-forced.",
         "severity": "High",
         "enabled": true,
@@ -1096,7 +1096,7 @@
       "kind": "Scheduled",
       "properties": {
         "displayName": "[Demo] AWS IAM Credential Abuse",
-        "description": "Detects suspicious IAM activity in AWS CloudTrail \u2014 creating users, access keys, or attaching policies from unusual IPs.",
+        "description": "Detects suspicious IAM activity in AWS CloudTrail — creating users, access keys, or attaching policies from unusual IPs.",
         "severity": "High",
         "enabled": true,
         "query": "AWSCloudTrailDemo_CL\n| where EventSource == 'iam.amazonaws.com'\n| where EventName in ('CreateUser', 'CreateAccessKey', 'AttachUserPolicy', 'PutUserPolicy', 'CreateLoginProfile')\n| where isempty(ErrorCode)\n| summarize ActionCount = count(), Actions = make_set(EventName), Regions = make_set(AWSRegion), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIPAddress, UserIdentityArn, RecipientAccountId\n| where ActionCount >= 2\n| extend AccountId = RecipientAccountId",
@@ -1231,7 +1231,7 @@
       "kind": "Scheduled",
       "properties": {
         "displayName": "[Demo] AWS CloudTrail Logging Disabled",
-        "description": "Detects when CloudTrail logging is stopped, trails are deleted, or security groups are opened \u2014 indicating defensive evasion or security config tampering.",
+        "description": "Detects when CloudTrail logging is stopped, trails are deleted, or security groups are opened — indicating defensive evasion or security config tampering.",
         "severity": "High",
         "enabled": true,
         "query": "AWSCloudTrailDemo_CL\n| where EventName in ('StopLogging', 'DeleteTrail', 'DeleteFlowLogs', 'AuthorizeSecurityGroupIngress', 'DisableEbsEncryptionByDefault')\n| where isempty(ErrorCode)\n| summarize ActionCount = count(), Actions = make_set(EventName), Regions = make_set(AWSRegion), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIPAddress, UserIdentityArn, RecipientAccountId\n| extend AccountId = RecipientAccountId",
@@ -1354,7 +1354,7 @@
       "kind": "Scheduled",
       "properties": {
         "displayName": "[Demo] GCP IAM Policy Modification",
-        "description": "Detects suspicious IAM policy changes in GCP \u2014 creating service account keys, setting overly permissive IAM policies, or creating new service accounts.",
+        "description": "Detects suspicious IAM policy changes in GCP — creating service account keys, setting overly permissive IAM policies, or creating new service accounts.",
         "severity": "High",
         "enabled": true,
         "query": "GCPAuditLogsDemo_CL\n| where ServiceName == 'iam.googleapis.com'\n| where MethodName has_any ('CreateServiceAccountKey', 'SetIamPolicy', 'CreateServiceAccount')\n| where StatusCode == 0\n| summarize ActionCount = count(), Methods = make_set(MethodName), Resources = make_set(ResourceName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by CallerIP, PrincipalEmail, ProjectId\n| where ActionCount >= 2",
@@ -1604,6 +1604,598 @@
           "Projects": "Projects"
         }
       }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-purview-dlp-mass-violation')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Purview DLP — Mass Policy Violations",
+        "description": "Detects a user triggering many DLP policy matches across workloads in a short period, indicating potential data exfiltration or careless handling of sensitive data.",
+        "severity": "High",
+        "enabled": true,
+        "query": "PurviewDLPDemo_CL\n| where Operation == 'DLPRuleMatch'\n| summarize ViolationCount = count(), Workloads = make_set(Workload), Policies = make_set(PolicyName), SensitiveTypes = make_set(SensitiveInfoType), TotalSensitiveItems = sum(SensitiveInfoCount), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId, ClientIP\n| where ViolationCount >= 5\n| extend Duration = LastEvent - FirstEvent",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Exfiltration",
+          "Collection"
+        ],
+        "techniques": [
+          "T1567",
+          "T1530"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "UserId"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "ClientIP"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ViolationCount": "ViolationCount",
+          "TotalSensitiveItems": "TotalSensitiveItems",
+          "Workloads": "Workloads",
+          "Duration": "Duration"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-purview-label-downgrade')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Purview — Sensitivity Label Downgrade",
+        "description": "Detects users downgrading or removing sensitivity labels from multiple documents, which may indicate an attempt to bypass data-protection controls.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "PurviewDLPDemo_CL\n| where Operation in ('SensitivityLabelDowngraded', 'SensitivityLabelRemoved')\n| summarize DowngradeCount = count(), Files = make_set(FileName), Workloads = make_set(Workload), Labels = make_set(SensitivityLabel), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId\n| where DowngradeCount >= 3",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "DefenseEvasion"
+        ],
+        "techniques": [
+          "T1562"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "UserId"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "DowngradeCount": "DowngradeCount",
+          "Files": "Files",
+          "Labels": "Labels"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-purview-external-sharing')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Purview — Sensitive Data External Sharing",
+        "description": "Detects DLP policy violations associated with external sharing of sensitive content via SharePoint, OneDrive, or Exchange.",
+        "severity": "High",
+        "enabled": true,
+        "query": "PurviewDLPDemo_CL\n| where Operation in ('DLPRuleMatch', 'SharingSet')\n| where Actions == 'BlockAccess' or Severity == 'High'\n| summarize ShareCount = count(), SensitiveTypes = make_set(SensitiveInfoType), Files = make_set(FileName), TotalItems = sum(SensitiveInfoCount), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId, Workload, ClientIP\n| where ShareCount >= 3",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Exfiltration"
+        ],
+        "techniques": [
+          "T1567"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "UserId"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "ClientIP"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ShareCount": "ShareCount",
+          "TotalItems": "TotalItems",
+          "SensitiveTypes": "SensitiveTypes"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-purview-irm-removed')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Purview — IRM Protection Removed",
+        "description": "Detects removal of Information Rights Management (IRM) protection from documents that were classified as Confidential or Highly Confidential.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "PurviewDLPDemo_CL\n| where Operation == 'IRMProtectionRemoved'\n| where SensitivityLabel has_any ('Confidential', 'Highly Confidential')\n| summarize RemovalCount = count(), Files = make_set(FileName), Workloads = make_set(Workload), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId\n| where RemovalCount >= 2",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "DefenseEvasion"
+        ],
+        "techniques": [
+          "T1562"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "UserId"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "RemovalCount": "RemovalCount",
+          "Files": "Files"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-purview-bulk-download')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Purview — Bulk Sensitive File Download",
+        "description": "Detects a high volume of sensitive file downloads from a single user/IP, indicating potential mass data exfiltration.",
+        "severity": "High",
+        "enabled": true,
+        "query": "PurviewDLPDemo_CL\n| where Operation == 'FileDownloaded'\n| summarize DownloadCount = count(), Files = make_set(FileName), TotalSensitiveItems = sum(SensitiveInfoCount), Workloads = make_set(Workload), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId, ClientIP\n| where DownloadCount >= 5\n| extend Duration = LastEvent - FirstEvent",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Exfiltration",
+          "Collection"
+        ],
+        "techniques": [
+          "T1530"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "UserId"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "ClientIP"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "DownloadCount": "DownloadCount",
+          "TotalSensitiveItems": "TotalSensitiveItems",
+          "Duration": "Duration"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-defender-phishing-campaign')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Defender Office — Phishing Campaign Detected",
+        "description": "Detects a bulk phishing campaign where the same sender or sender IP targets multiple recipients within the organization.",
+        "severity": "High",
+        "enabled": true,
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| summarize TargetCount = dcount(RecipientEmailAddress), Targets = make_set(RecipientEmailAddress), Subjects = make_set(Subject), BlockedCount = countif(DeliveryAction == 'Blocked'), DeliveredCount = countif(DeliveryAction == 'Delivered'), Methods = make_set(DetectionMethod), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress, SenderIPAddress\n| where TargetCount >= 3",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "InitialAccess"
+        ],
+        "techniques": [
+          "T1566"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "SenderIPAddress"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "TargetCount": "TargetCount",
+          "BlockedCount": "BlockedCount",
+          "DeliveredCount": "DeliveredCount",
+          "Methods": "Methods"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-defender-malicious-url-click')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Defender Office — User Clicked Malicious URL",
+        "description": "Detects users who clicked on URLs in emails that were flagged as phishing by URL detonation, indicating potential credential compromise.",
+        "severity": "High",
+        "enabled": true,
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| where UserAction == 'Clicked'\n| summarize ClickCount = count(), Senders = make_set(SenderFromAddress), Subjects = make_set(Subject), ClickedUrls = make_set(Urls), FirstClick = min(TimeGenerated), LastClick = max(TimeGenerated) by RecipientEmailAddress\n| where ClickCount >= 1",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "InitialAccess",
+          "Execution"
+        ],
+        "techniques": [
+          "T1566.002"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "RecipientEmailAddress"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ClickCount": "ClickCount",
+          "ClickedUrls": "ClickedUrls",
+          "Senders": "Senders"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-defender-user-reported-phish')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Defender Office — User Reported Phishing",
+        "description": "Tracks emails reported as phishing by users. A high volume of reports may indicate an active phishing campaign that bypassed automated detection.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "DefenderOfficeDemo_CL\n| where DetectionMethod == 'UserReported'\n| where UserAction == 'ReportedAsPhish'\n| summarize ReportCount = count(), Reporters = make_set(RecipientEmailAddress), ReporterCount = dcount(RecipientEmailAddress), Senders = make_set(SenderFromAddress), ThreatTypes = make_set(ThreatType), ConfirmedPhish = countif(ThreatType == 'Phish'), FirstReport = min(TimeGenerated), LastReport = max(TimeGenerated) by SenderFromAddress\n| where ReportCount >= 2",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "InitialAccess"
+        ],
+        "techniques": [
+          "T1566"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Mailbox",
+            "fieldMappings": [
+              {
+                "identifier": "MailboxPrimaryAddress",
+                "columnName": "SenderFromAddress"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Mailbox"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ReportCount": "ReportCount",
+          "ReporterCount": "ReporterCount",
+          "ConfirmedPhish": "ConfirmedPhish"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-defender-safe-attachment-malware')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Defender Office — Safe Attachments Malware Blocked",
+        "description": "Detects emails with malicious attachments blocked by Safe Attachments detonation, potentially targeting specific users with custom malware.",
+        "severity": "High",
+        "enabled": true,
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Malware'\n| where DetectionMethod == 'SafeAttachments'\n| summarize MalwareCount = count(), Targets = make_set(RecipientEmailAddress), TargetCount = dcount(RecipientEmailAddress), Subjects = make_set(Subject), SenderIPs = make_set(SenderIPAddress), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress\n| where MalwareCount >= 1",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "InitialAccess",
+          "Execution"
+        ],
+        "techniques": [
+          "T1566.001"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "Mailbox",
+            "fieldMappings": [
+              {
+                "identifier": "MailboxPrimaryAddress",
+                "columnName": "SenderFromAddress"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Mailbox"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "MalwareCount": "MalwareCount",
+          "TargetCount": "TargetCount",
+          "SenderIPs": "SenderIPs"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-defender-phish-delivered-inbox')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] Defender Office — Phishing Delivered to Inbox",
+        "description": "Detects phishing emails that were delivered to the Inbox rather than blocked or quarantined, indicating a detection gap that requires remediation.",
+        "severity": "High",
+        "enabled": true,
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| where DeliveryAction == 'Delivered' and DeliveryLocation == 'Inbox'\n| summarize DeliveredCount = count(), Recipients = make_set(RecipientEmailAddress), RecipientCount = dcount(RecipientEmailAddress), Subjects = make_set(Subject), Methods = make_set(DetectionMethod), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress, SenderIPAddress\n| where DeliveredCount >= 1",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "InitialAccess"
+        ],
+        "techniques": [
+          "T1566"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "SenderIPAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "Mailbox",
+            "fieldMappings": [
+              {
+                "identifier": "MailboxPrimaryAddress",
+                "columnName": "SenderFromAddress"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "DeliveredCount": "DeliveredCount",
+          "RecipientCount": "RecipientCount",
+          "Methods": "Methods"
+        }
+      }
     }
   ],
   "outputs": {
@@ -1621,10 +2213,10 @@
         "[Demo] SSH Brute Force Attack on Linux",
         "[Demo] Suspicious Sudo Activity",
         "[Demo] Critical Service Failure Detected",
-        "[Demo] Ubiquiti \u2014 Port Scan Detected",
-        "[Demo] Ubiquiti \u2014 IDS Intrusion Alert",
-        "[Demo] Ubiquiti \u2014 Suspicious VPN Connection",
-        "[Demo] Brute Force PIN Cracked \u2014 Successful Guess",
+        "[Demo] Ubiquiti — Port Scan Detected",
+        "[Demo] Ubiquiti — IDS Intrusion Alert",
+        "[Demo] Ubiquiti — Suspicious VPN Connection",
+        "[Demo] Brute Force PIN Cracked — Successful Guess",
         "[Demo] AWS IAM Credential Abuse",
         "[Demo] AWS S3 Data Exfiltration",
         "[Demo] AWS CloudTrail Logging Disabled",

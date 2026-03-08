@@ -111,3 +111,83 @@ class GCPAuditLogEvent(BaseModel):
     StatusCode: int = Field(0, description="Status code (0 = success)")
     StatusMessage: str = Field("OK", description="Status message")
     AuthorizationInfo: str | None = Field(None, description="JSON-encoded authorization details")
+
+
+class PurviewDLPEvent(BaseModel):
+    """Schema for Microsoft Purview DLP / IRM events.
+
+    Models Data Loss Prevention policy matches, sensitivity-label
+    changes, and Information Rights Management protection events
+    for the custom PurviewDLPDemo_CL table.
+    """
+
+    TimeGenerated: datetime.datetime = Field(..., description="Event timestamp in UTC")
+    Operation: str = Field(
+        ...,
+        description="Operation type (e.g., DLPRuleMatch, SensitivityLabelApplied)",
+    )
+    Workload: str = Field(
+        ...,
+        description="Workload: Exchange, SharePoint, OneDrive, Teams, Endpoint",
+    )
+    UserId: str = Field(..., description="UPN of the acting user")
+    PolicyName: str = Field(..., description="DLP policy name that matched")
+    RuleName: str = Field(..., description="Specific DLP rule name")
+    Severity: str = Field(..., description="Severity: Low, Medium, High")
+    Actions: str = Field(..., description="Actions taken: NotifyUser, BlockAccess, Audit")
+    SensitiveInfoType: str = Field(
+        ...,
+        description="Sensitive information type (e.g., Credit Card Number)",
+    )
+    SensitiveInfoCount: int = Field(
+        ...,
+        description="Number of sensitive items found",
+    )
+    FileName: str = Field(..., description="Name of the file or email subject")
+    FilePath: str = Field(..., description="SharePoint URL, mailbox path, or endpoint path")
+    SensitivityLabel: str | None = Field(
+        None,
+        description="Sensitivity label (Confidential, Internal, etc.)",
+    )
+    ClientIP: str = Field(..., description="Client IP address")
+    ItemType: str = Field(..., description="Item type: File, Email, Message, EndpointItem")
+
+
+class DefenderOfficeEvent(BaseModel):
+    """Schema for Microsoft Defender for Office 365 email events.
+
+    Models email threat detections, Safe-Links detonations, and
+    user-reported phishing for the custom DefenderOfficeDemo_CL table.
+    All URLs use demo-safe domains (.example.com / contoso.*).
+    """
+
+    TimeGenerated: datetime.datetime = Field(..., description="Event timestamp in UTC")
+    NetworkMessageId: str = Field(..., description="Unique message identifier (GUID)")
+    SenderFromAddress: str = Field(..., description="Sender email address")
+    RecipientEmailAddress: str = Field(..., description="Recipient email address")
+    Subject: str = Field(..., description="Email subject")
+    DeliveryAction: str = Field(..., description="Delivered, Blocked, Replaced")
+    DeliveryLocation: str = Field(
+        ...,
+        description="Inbox, JunkFolder, Quarantine, Deleted",
+    )
+    ThreatType: str = Field(..., description="Phish, Malware, Spam, Clean")
+    DetectionMethod: str = Field(
+        ...,
+        description="URLDetonation, Impersonation, Reputation, UserReported, SafeAttachments",
+    )
+    UrlCount: int = Field(0, description="Number of URLs in the email")
+    Urls: str | None = Field(None, description="JSON array of URLs found in the email")
+    PhishConfidenceLevel: str = Field(
+        "Normal",
+        description="Confidence: Low, Normal, High, VeryHigh",
+    )
+    SenderIPAddress: str = Field(..., description="IP of the sending MTA")
+    AuthenticationDetails: str = Field(
+        ...,
+        description="SPF/DKIM/DMARC results as semicolon-separated string",
+    )
+    UserAction: str | None = Field(
+        None,
+        description="User action: ReportedAsPhish, Clicked, None",
+    )

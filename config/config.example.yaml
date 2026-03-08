@@ -267,3 +267,91 @@ scenarios:
     parameters:
       event_type: "credential_brute_force"
       source_ip: "203.0.113.91"
+
+  # ========================================================================
+  # Purview DLP / IRM scenarios - ingest to PurviewDLPDemo_CL table
+  # ========================================================================
+  - name: purview_dlp_policy_violation
+    log_type: purview_dlp
+    stream_name: "Custom-PurviewDLPDemo_CL"
+    description: "Simulate DLP policy matches on sensitive data across workloads"
+    count: 40
+    parameters:
+      event_type: "dlp_policy_violation"
+
+  - name: purview_sensitivity_label_downgrade
+    log_type: purview_dlp
+    stream_name: "Custom-PurviewDLPDemo_CL"
+    description: "Simulate users downgrading sensitivity labels on documents"
+    count: 20
+    parameters:
+      event_type: "sensitivity_label_downgrade"
+
+  - name: purview_external_sharing
+    log_type: purview_dlp
+    stream_name: "Custom-PurviewDLPDemo_CL"
+    description: "Simulate sensitive content shared with external recipients"
+    count: 30
+    parameters:
+      event_type: "external_sharing"
+
+  - name: purview_bulk_download
+    log_type: purview_dlp
+    stream_name: "Custom-PurviewDLPDemo_CL"
+    description: "Simulate bulk download of sensitive files from SharePoint/OneDrive"
+    count: 25
+    parameters:
+      event_type: "bulk_download"
+      source_ip: "203.0.113.10"
+
+  - name: purview_irm_protection_removed
+    log_type: purview_dlp
+    stream_name: "Custom-PurviewDLPDemo_CL"
+    description: "Simulate IRM protection being removed from sensitive documents"
+    count: 15
+    parameters:
+      event_type: "irm_protection_removed"
+
+  # ========================================================================
+  # Defender for Office 365 scenarios - ingest to DefenderOfficeDemo_CL
+  # ========================================================================
+  - name: defender_phishing_detected
+    log_type: defender_office
+    stream_name: "Custom-DefenderOfficeDemo_CL"
+    description: "Simulate phishing emails detected and blocked by Defender"
+    count: 40
+    parameters:
+      event_type: "phishing_detected"
+
+  - name: defender_malicious_url_click
+    log_type: defender_office
+    stream_name: "Custom-DefenderOfficeDemo_CL"
+    description: "Simulate user clicking on links retroactively flagged as malicious"
+    count: 20
+    parameters:
+      event_type: "malicious_url_click"
+
+  - name: defender_user_reported_phish
+    log_type: defender_office
+    stream_name: "Custom-DefenderOfficeDemo_CL"
+    description: "Simulate users reporting emails as phishing via Report button"
+    count: 25
+    parameters:
+      event_type: "user_reported_phish"
+
+  - name: defender_bulk_phishing_campaign
+    log_type: defender_office
+    stream_name: "Custom-DefenderOfficeDemo_CL"
+    description: "Simulate a mass phishing campaign targeting multiple users"
+    count: 50
+    parameters:
+      event_type: "bulk_phishing_campaign"
+      sender_ip: "198.51.100.60"
+
+  - name: defender_safe_attachment_block
+    log_type: defender_office
+    stream_name: "Custom-DefenderOfficeDemo_CL"
+    description: "Simulate Safe Attachments blocking malicious email attachments"
+    count: 15
+    parameters:
+      event_type: "safe_attachment_block"

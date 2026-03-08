@@ -14,7 +14,9 @@ from sentinel_data_generator.core.config import (
 from sentinel_data_generator.generators.aws_cloudtrail import AWSCloudTrailGenerator
 from sentinel_data_generator.generators.base import BaseGenerator
 from sentinel_data_generator.generators.common_security_log import CommonSecurityLogGenerator
+from sentinel_data_generator.generators.defender_office import DefenderOfficeGenerator
 from sentinel_data_generator.generators.gcp_audit_logs import GCPAuditLogsGenerator
+from sentinel_data_generator.generators.purview_dlp import PurviewDLPGenerator
 from sentinel_data_generator.generators.security_event import SecurityEventGenerator
 from sentinel_data_generator.generators.signin_logs import SigninLogsGenerator
 from sentinel_data_generator.generators.syslog import SyslogGenerator
@@ -37,6 +39,8 @@ GENERATOR_REGISTRY: dict[str, type[BaseGenerator]] = {
     "syslog_native": SyslogGenerator,
     "aws_cloudtrail": AWSCloudTrailGenerator,
     "gcp_audit_logs": GCPAuditLogsGenerator,
+    "purview_dlp": PurviewDLPGenerator,
+    "defender_office": DefenderOfficeGenerator,
 }
 
 

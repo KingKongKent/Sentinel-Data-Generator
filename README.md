@@ -6,13 +6,15 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 
 ## Features
 
-- **Realistic security event generation** — 6 log types with 25 scenarios:
+- **Realistic security event generation** — 8 log types with 35 scenarios:
   - **Windows SecurityEvent** — brute-force attacks, privilege escalation (Event IDs 4624, 4625, 4648, 4672, 4688, 4720, 4726)
   - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler, Ubiquiti
   - **SigninLogs** — Microsoft Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
   - **Syslog** — Linux system events with SSH authentication, sudo abuse, service failures
   - **AWS CloudTrail** — IAM credential abuse, S3 data exfiltration, security tampering, compute abuse, console brute force
   - **GCP Audit Logs** — IAM policy changes, data exfiltration, security config tampering, compute abuse, brute force auth
+  - **Purview DLP/IRM** — DLP policy violations, sensitivity label downgrades, external sharing, bulk downloads, IRM protection removal
+  - **Defender for Office 365** — phishing detection, malicious URL clicks, user-reported phish, bulk phishing campaigns, Safe Attachments blocks
 - **Live Brute Force Demo** — interactive web app where audiences try to crack a 4-digit PIN in real time, with every attempt logged to Sentinel’s `BruteForceDemo_CL` table. Includes a collapsible **"Try in Sentinel"** panel with ready-to-use Copilot prompts and KQL queries (see [brute-force-demo/](brute-force-demo/))
 - **Scenario-driven** — configure brute-force attacks, privilege escalation, anomalous sign-ins, and more via YAML
 - **Multiple output targets** — send to Azure Log Analytics (`log_analytics`), write to local file (`file` — JSON/CSV), or print to console (`stdout`)
@@ -20,7 +22,7 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 - **Pydantic v2 validation** — all generated events are validated against strict schemas before output
 - **Configurable** — control event count, time range, random seed, and per-scenario parameters
 - **Infrastructure-as-Code** — includes Bicep templates to deploy DCE, DCR, custom tables, workbook, and analytic rules
-- **Sentinel content included** — pre-built workbook with 9 visualization tabs (including AWS CloudTrail, GCP Audit Logs, Brute Force leaderboard, and "Who Cracked the PIN?" panels) and 23 detection rules
+- **Sentinel content included** — pre-built workbook with 11 visualization tabs (including Purview DLP/IRM, Defender for Office, AWS CloudTrail, GCP Audit Logs, Brute Force leaderboard, and "Who Cracked the PIN?" panels) and 33 detection rules
 - **Extensible** — add new log types by subclassing `BaseGenerator` and registering in the engine
 
 ## Prerequisites
@@ -57,8 +59,8 @@ pip install -r requirements.txt
 
 The project includes a Bicep template (`infra/main.bicep`) that creates:
 - A **Data Collection Endpoint** (DCE)
-- Four **custom Log Analytics tables** (`SecurityEventDemo_CL`, `SigninLogDemo_CL`, `SyslogDemo_CL`, `CommonSecurityLogDemo_CL`, `BruteForceDemo_CL`, `AWSCloudTrailDemo_CL`, `GCPAuditLogsDemo_CL`)
-- A **Data Collection Rule** (DCR) with stream declarations and data flows for all seven tables
+- Nine **custom Log Analytics tables** (`SecurityEventDemo_CL`, `SigninLogDemo_CL`, `SyslogDemo_CL`, `CommonSecurityLogDemo_CL`, `BruteForceDemo_CL`, `AWSCloudTrailDemo_CL`, `GCPAuditLogsDemo_CL`, `PurviewDLPDemo_CL`, `DefenderOfficeDemo_CL`)
+- A **Data Collection Rule** (DCR) with stream declarations and data flows for all nine tables
 
 **Prerequisites:** Azure CLI with Bicep support (`az bicep install`).
 
@@ -171,8 +173,8 @@ Sentinel-Data-Generator/
 │   ├── main.bicepparam             # Deployment parameters
 │   ├── deploy.ps1                  # PowerShell deployment script
 │   ├── deploy.sh                   # Bash deployment script
-│   ├── workbook.json               # Sentinel workbook (9 tabs)
-│   └── analytic-rules.json         # 23 Sentinel detection rules
+│   ├── workbook.json               # Sentinel workbook (11 tabs)
+│   └── analytic-rules.json         # 33 Sentinel detection rules
 ├── config/
 │   └── config.example.yaml         # Example YAML configuration
 ├── notebooks/
@@ -192,10 +194,12 @@ Sentinel-Data-Generator/
 │   │   ├── signin_logs.py         # Microsoft Entra ID SigninLogs generator
 │   │   ├── syslog.py              # Linux Syslog generator
 │   │   ├── aws_cloudtrail.py      # AWS CloudTrail generator
-│   │   └── gcp_audit_logs.py      # GCP Audit Logs generator
+│   │   ├── gcp_audit_logs.py      # GCP Audit Logs generator
+│   │   ├── purview_dlp.py         # Purview DLP/IRM generator
+│   │   └── defender_office.py     # Defender for Office 365 generator
 │   ├── models/
 │   │   ├── __init__.py
-│   │   └── schemas.py             # Pydantic v2 models (6 log types)
+│   │   └── schemas.py             # Pydantic v2 models (8 log types)
 │   ├── outputs/
 │   │   ├── __init__.py
 │   │   ├── base.py                # BaseOutput ABC
@@ -272,7 +276,7 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | `generation` | `time_range.end` | ISO 8601 UTC end datetime |
 | `generation` | `seed` | Random seed for reproducibility |
 | `scenarios[]` | `name` | Scenario identifier |
-| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native`, `signin_logs`, `syslog`, `aws_cloudtrail`, `gcp_audit_logs` |
+| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native`, `signin_logs`, `syslog`, `aws_cloudtrail`, `gcp_audit_logs`, `purview_dlp`, `defender_office` |
 | `scenarios[]` | `stream_name` | Override stream for this scenario |
 | `scenarios[]` | `count` | Override event count for this scenario |
 | `scenarios[]` | `parameters` | Generator-specific parameters |
@@ -296,6 +300,8 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | BruteForceDemo | Live audience demo | `BruteForceDemo_CL` (custom) | ✅ Implemented |
 | AWSCloudTrail | `aws_cloudtrail` | `AWSCloudTrailDemo_CL` (custom) | ✅ Implemented |
 | GCPAuditLogs | `gcp_audit_logs` | `GCPAuditLogsDemo_CL` (custom) | ✅ Implemented |
+| PurviewDLP | `purview_dlp` | `PurviewDLPDemo_CL` (custom) | ✅ Implemented |
+| DefenderOffice | `defender_office` | `DefenderOfficeDemo_CL` (custom) | ✅ Implemented |
 
 ### SecurityEvent Generator
 
@@ -445,6 +451,54 @@ Generates GCP Audit Log events for the `GCPAuditLogsDemo_CL` custom table. Simul
 
 **Generated fields include:** `TimeGenerated`, `ServiceName`, `MethodName`, `CallerIP`, `PrincipalEmail`, `ResourceName`, `ResourceType`, `Severity`, `ProjectId`, `StatusCode`, `StatusMessage`, `AuthorizationInfo`.
 
+### Purview DLP/IRM Generator
+
+Generates Microsoft Purview Data Loss Prevention and Information Rights Management events for the `PurviewDLPDemo_CL` custom table. Simulates data protection policy enforcement across Microsoft 365 workloads:
+
+| Scenario | Description |
+|----------|-------------|
+| `purview_dlp_policy_violation` | DLP policy matches on sensitive data (credit cards, SSN, health records) |
+| `purview_sensitivity_label_downgrade` | Users downgrading sensitivity labels (e.g., Highly Confidential → Internal) |
+| `purview_external_sharing` | Sensitive content shared with external recipients |
+| `purview_bulk_download` | Bulk download of sensitive files from SharePoint/OneDrive |
+| `purview_irm_protection_removed` | IRM/encryption protection removed from documents |
+
+**Supported workloads:** Exchange, SharePoint, OneDrive, Teams, Endpoint
+
+**DLP policies:** Financial Data Protection, PII Protection Policy, Healthcare Compliance, Intellectual Property
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `attack_type` | `string` | Scenario type (optional — randomized if omitted) |
+| `source_ip` | `string` | Client IP address (optional) |
+
+**Generated fields include:** `TimeGenerated`, `Operation`, `Workload`, `UserId`, `PolicyName`, `RuleName`, `Severity`, `Actions`, `SensitiveInfoType`, `SensitiveInfoCount`, `FileName`, `FilePath`, `SensitivityLabel`, `ClientIP`, `ItemType`.
+
+### Defender for Office 365 Generator
+
+Generates Microsoft Defender for Office 365 email threat events for the `DefenderOfficeDemo_CL` custom table. All URLs use demo-safe `.example.com` domains — no real malicious content:
+
+| Scenario | Description |
+|----------|-------------|
+| `defender_phishing_detected` | Phishing emails detected and blocked/quarantined |
+| `defender_malicious_url_click` | User clicked a link later detonated as malicious |
+| `defender_user_reported_phish` | Users reporting suspicious emails via Report Message button |
+| `defender_bulk_phishing_campaign` | Bulk phishing campaign targeting multiple users from same sender IP |
+| `defender_safe_attachment_block` | Safe Attachments detected malicious macro-enabled documents |
+
+**Detection methods:** URL detonation, Impersonation, Reputation, UserReported, SafeAttachments
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `attack_type` | `string` | Scenario type (optional — randomized if omitted) |
+| `source_ip` | `string` | Sender IP address (optional) |
+
+**Generated fields include:** `TimeGenerated`, `NetworkMessageId`, `SenderFromAddress`, `RecipientEmailAddress`, `Subject`, `DeliveryAction`, `DeliveryLocation`, `ThreatType`, `DetectionMethod`, `UrlCount`, `Urls`, `PhishConfidenceLevel`, `SenderIPAddress`, `AuthenticationDetails`, `UserAction`.
+
 ## Brute Force Demo (Live Audience)
 
 The `brute-force-demo/` folder contains a standalone interactive web app for live presentations. Your audience visits a web page and tries to guess a secret 4-digit PIN — every attempt is logged in real time to the `BruteForceDemo_CL` table in Sentinel.
@@ -544,7 +598,7 @@ Pre-built Sentinel content is included for immediate use with the generated demo
 
 ### Analysis Notebook
 
-A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 7 tables directly in the **Microsoft Sentinel Data Lake**. Built following the [official documentation](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebooks) using the `MicrosoftSentinelProvider` class, PySpark DataFrames, and `matplotlib`.
+A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 9 tables directly in the **Microsoft Sentinel Data Lake**. Built following the [official documentation](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebooks) using the `MicrosoftSentinelProvider` class, PySpark DataFrames, and `matplotlib`.
 
 - **Setup** — Initializes `MicrosoftSentinelProvider(spark)` and lists available workspaces
 - **Overview** — Event distribution across all tables (pie chart)
@@ -571,7 +625,7 @@ A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 7 tab
 
 ### Workbook
 
-The workbook (`infra/workbook.json`) provides 9 visualization tabs:
+The workbook (`infra/workbook.json`) provides 11 visualization tabs:
 
 | Tab | Visualizations |
 |-----|---------------|
@@ -582,6 +636,8 @@ The workbook (`infra/workbook.json`) provides 9 visualization tabs:
 | **Syslog** | Events by facility and severity, SSH failures |
 | **AWS CloudTrail** | Events by service, top API actions, region distribution, failed calls, IAM activity, top IPs |
 | **GCP Audit Logs** | Events by service, top methods, severity, failed operations, IAM activity, top IPs |
+| **Purview DLP / IRM** | Events by operation, events by workload, top users, policy matches by severity, sensitive info types, label downgrades, DLP events timeline |
+| **Defender for Office** | Summary tiles, email threats timeline, delivery actions, top threat senders, detection methods, users who clicked, user-reported phishing leaderboard |
 | **Alerts & Incidents** | Active alerts, incident timeline, severity breakdown |
 | **Brute Force Demo** | Summary tiles, live timeline, per-nickname stats, most-guessed PINs, 🏆 Leaderboard, 🎉 Who Cracked the PIN?, Try in Sentinel prompts |
 
@@ -596,7 +652,7 @@ az deployment group create \
 
 ### Analytic Rules
 
-23 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
+33 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
 
 | Rule | Log Type | Description |
 |------|----------|-------------|
@@ -623,6 +679,16 @@ az deployment group create \
 | GCP Data Exfiltration | GCPAuditLogsDemo_CL | Unusual data access/export |
 | GCP Security Config Tampering | GCPAuditLogsDemo_CL | Disabling security controls |
 | GCP Brute Force Authentication | GCPAuditLogsDemo_CL | Multiple failed auth attempts |
+| Purview DLP Mass Policy Violations | PurviewDLPDemo_CL | 5+ DLP violations by same user in 6 hours |
+| Purview Sensitivity Label Downgrade | PurviewDLPDemo_CL | Sensitivity label downgraded on documents |
+| Purview Sensitive Data External Sharing | PurviewDLPDemo_CL | Sensitive files shared externally |
+| Purview IRM Protection Removed | PurviewDLPDemo_CL | IRM/encryption removed from protected documents |
+| Purview Bulk Sensitive File Download | PurviewDLPDemo_CL | 3+ sensitive file downloads by same user |
+| Defender Office Phishing Campaign | DefenderOfficeDemo_CL | Phishing campaign from same sender IP |
+| Defender Office Malicious URL Clicked | DefenderOfficeDemo_CL | User clicked URL in malicious email |
+| Defender Office User Reported Phishing | DefenderOfficeDemo_CL | User-reported phishing emails |
+| Defender Office Safe Attachments Block | DefenderOfficeDemo_CL | Malware blocked by Safe Attachments |
+| Defender Office Phishing Delivered | DefenderOfficeDemo_CL | Phishing email delivered to inbox |
 
 **Deploy the analytic rules:**
 

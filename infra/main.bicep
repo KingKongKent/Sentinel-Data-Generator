@@ -38,6 +38,8 @@ var commonSecurityLogTable = 'CommonSecurityLogDemo_CL'
 var bruteForceDemoTable = 'BruteForceDemo_CL'
 var awsCloudTrailTable = 'AWSCloudTrailDemo_CL'
 var gcpAuditLogsTable = 'GCPAuditLogsDemo_CL'
+var purviewDlpTable = 'PurviewDLPDemo_CL'
+var defenderOfficeTable = 'DefenderOfficeDemo_CL'
 
 // Stream names (must start with Custom-)
 var securityEventStream = 'Custom-${securityEventTable}'
@@ -47,6 +49,8 @@ var commonSecurityLogStream = 'Custom-${commonSecurityLogTable}'
 var bruteForceDemoStream = 'Custom-${bruteForceDemoTable}'
 var awsCloudTrailStream = 'Custom-${awsCloudTrailTable}'
 var gcpAuditLogsStream = 'Custom-${gcpAuditLogsTable}'
+var purviewDlpStream = 'Custom-${purviewDlpTable}'
+var defenderOfficeStream = 'Custom-${defenderOfficeTable}'
 
 // Native table streams for live tables
 var commonSecurityLogNativeStream = 'Custom-CommonSecurityLogNative'
@@ -243,6 +247,62 @@ resource gcpAuditLogsDemoTable 'Microsoft.OperationalInsights/workspaces/tables@
   }
 }
 
+resource purviewDlpDemoTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: workspace
+  name: purviewDlpTable
+  properties: {
+    schema: {
+      name: purviewDlpTable
+      columns: [
+        { name: 'TimeGenerated', type: 'dateTime', description: 'Event timestamp in UTC' }
+        { name: 'Operation', type: 'string', description: 'Operation type (DLPRuleMatch, SensitivityLabelDowngraded, etc.)' }
+        { name: 'Workload', type: 'string', description: 'Workload: Exchange, SharePoint, OneDrive, Teams, Endpoint' }
+        { name: 'UserId', type: 'string', description: 'UPN of the acting user' }
+        { name: 'PolicyName', type: 'string', description: 'DLP policy name' }
+        { name: 'RuleName', type: 'string', description: 'DLP rule name' }
+        { name: 'Severity', type: 'string', description: 'Severity: Low, Medium, High' }
+        { name: 'Actions', type: 'string', description: 'Actions taken: NotifyUser, BlockAccess, Audit' }
+        { name: 'SensitiveInfoType', type: 'string', description: 'Sensitive info type detected' }
+        { name: 'SensitiveInfoCount', type: 'int', description: 'Count of sensitive items found' }
+        { name: 'FileName', type: 'string', description: 'File or email name' }
+        { name: 'FilePath', type: 'string', description: 'Full path or URL' }
+        { name: 'SensitivityLabel', type: 'string', description: 'Sensitivity label' }
+        { name: 'ClientIP', type: 'string', description: 'Client IP address' }
+        { name: 'ItemType', type: 'string', description: 'Item type: File, Email, Message, EndpointItem' }
+      ]
+    }
+    retentionInDays: 30
+  }
+}
+
+resource defenderOfficeDemoTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: workspace
+  name: defenderOfficeTable
+  properties: {
+    schema: {
+      name: defenderOfficeTable
+      columns: [
+        { name: 'TimeGenerated', type: 'dateTime', description: 'Event timestamp in UTC' }
+        { name: 'NetworkMessageId', type: 'string', description: 'Unique message identifier' }
+        { name: 'SenderFromAddress', type: 'string', description: 'Sender email address' }
+        { name: 'RecipientEmailAddress', type: 'string', description: 'Recipient email address' }
+        { name: 'Subject', type: 'string', description: 'Email subject' }
+        { name: 'DeliveryAction', type: 'string', description: 'Delivered, Blocked, Replaced' }
+        { name: 'DeliveryLocation', type: 'string', description: 'Inbox, JunkFolder, Quarantine, Deleted' }
+        { name: 'ThreatType', type: 'string', description: 'Phish, Malware, Spam, Clean' }
+        { name: 'DetectionMethod', type: 'string', description: 'URLDetonation, Impersonation, Reputation, UserReported, SafeAttachments' }
+        { name: 'UrlCount', type: 'int', description: 'Number of URLs in the email' }
+        { name: 'Urls', type: 'string', description: 'JSON array of URLs' }
+        { name: 'PhishConfidenceLevel', type: 'string', description: 'Confidence: Low, Normal, High, VeryHigh' }
+        { name: 'SenderIPAddress', type: 'string', description: 'Sender MTA IP address' }
+        { name: 'AuthenticationDetails', type: 'string', description: 'SPF/DKIM/DMARC results' }
+        { name: 'UserAction', type: 'string', description: 'User action: ReportedAsPhish, Clicked, None' }
+      ]
+    }
+    retentionInDays: 30
+  }
+}
+
 // ============================================================================
 // Data Collection Rule
 // ============================================================================
@@ -259,6 +319,8 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
     bruteForceDemoTable_resource
     awsCloudTrailDemoTable
     gcpAuditLogsDemoTable
+    purviewDlpDemoTable
+    defenderOfficeDemoTable
   ]
   properties: {
     dataCollectionEndpointId: dataCollectionEndpoint.id
@@ -397,6 +459,46 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
           { name: 'AuthorizationInfo', type: 'string' }
         ]
       }
+      // Stream for Purview DLP demo table
+      '${purviewDlpStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'Operation', type: 'string' }
+          { name: 'Workload', type: 'string' }
+          { name: 'UserId', type: 'string' }
+          { name: 'PolicyName', type: 'string' }
+          { name: 'RuleName', type: 'string' }
+          { name: 'Severity', type: 'string' }
+          { name: 'Actions', type: 'string' }
+          { name: 'SensitiveInfoType', type: 'string' }
+          { name: 'SensitiveInfoCount', type: 'int' }
+          { name: 'FileName', type: 'string' }
+          { name: 'FilePath', type: 'string' }
+          { name: 'SensitivityLabel', type: 'string' }
+          { name: 'ClientIP', type: 'string' }
+          { name: 'ItemType', type: 'string' }
+        ]
+      }
+      // Stream for Defender for Office demo table
+      '${defenderOfficeStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'NetworkMessageId', type: 'string' }
+          { name: 'SenderFromAddress', type: 'string' }
+          { name: 'RecipientEmailAddress', type: 'string' }
+          { name: 'Subject', type: 'string' }
+          { name: 'DeliveryAction', type: 'string' }
+          { name: 'DeliveryLocation', type: 'string' }
+          { name: 'ThreatType', type: 'string' }
+          { name: 'DetectionMethod', type: 'string' }
+          { name: 'UrlCount', type: 'int' }
+          { name: 'Urls', type: 'string' }
+          { name: 'PhishConfidenceLevel', type: 'string' }
+          { name: 'SenderIPAddress', type: 'string' }
+          { name: 'AuthenticationDetails', type: 'string' }
+          { name: 'UserAction', type: 'string' }
+        ]
+      }
     }
     destinations: {
       logAnalytics: [
@@ -448,6 +550,18 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
         destinations: [ 'sentinel-workspace' ]
         transformKql: 'source'
         outputStream: gcpAuditLogsStream
+      }
+      {
+        streams: [ purviewDlpStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: purviewDlpStream
+      }
+      {
+        streams: [ defenderOfficeStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: defenderOfficeStream
       }
       {
         streams: [ commonSecurityLogNativeStream ]
@@ -507,3 +621,9 @@ output awsCloudTrailStreamName string = awsCloudTrailStream
 
 @description('Stream name for GCP Audit Logs demo data.')
 output gcpAuditLogsStreamName string = gcpAuditLogsStream
+
+@description('Stream name for Purview DLP demo data.')
+output purviewDlpStreamName string = purviewDlpStream
+
+@description('Stream name for Defender for Office demo data.')
+output defenderOfficeStreamName string = defenderOfficeStream
