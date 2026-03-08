@@ -1988,7 +1988,7 @@
           "Execution"
         ],
         "techniques": [
-          "T1566.002"
+          "T1566"
         ],
         "entityMappings": [
           {
@@ -2099,7 +2099,7 @@
           "Execution"
         ],
         "techniques": [
-          "T1566.001"
+          "T1566"
         ],
         "entityMappings": [
           {
