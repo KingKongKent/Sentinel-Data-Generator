@@ -68,3 +68,46 @@ class CommonSecurityLogEvent(BaseModel):
     DestinationPort: int | None = Field(None, description="Destination port number")
     Protocol: str | None = Field(None, description="Network protocol (TCP, UDP, etc.)")
     RequestURL: str | None = Field(None, description="Requested URL if applicable")
+
+
+class AWSCloudTrailEvent(BaseModel):
+    """Schema for AWS CloudTrail audit log events.
+
+    Mirrors the Sentinel AWSCloudTrail table schema used by the
+    Amazon Web Services S3 connector.
+    """
+
+    TimeGenerated: datetime.datetime = Field(..., description="Event timestamp in UTC")
+    EventName: str = Field(..., description="AWS API action name (e.g., ConsoleLogin, RunInstances)")
+    EventSource: str = Field(..., description="AWS service (e.g., iam.amazonaws.com)")
+    SourceIPAddress: str = Field(..., description="Caller IP address")
+    UserIdentityArn: str = Field(..., description="ARN of the calling principal")
+    UserIdentityType: str = Field(..., description="Identity type: Root, IAMUser, AssumedRole")
+    UserAgent: str = Field(..., description="Caller user agent string")
+    AWSRegion: str = Field(..., description="AWS region (e.g., us-east-1)")
+    RecipientAccountId: str = Field(..., description="AWS account ID receiving the API call")
+    ErrorCode: str | None = Field(None, description="Error code if the call failed")
+    ErrorMessage: str | None = Field(None, description="Error message if the call failed")
+    RequestParameters: str | None = Field(None, description="JSON-encoded request parameters")
+    ResponseElements: str | None = Field(None, description="JSON-encoded response elements")
+
+
+class GCPAuditLogEvent(BaseModel):
+    """Schema for Google Cloud Platform audit log events.
+
+    Mirrors the Sentinel GCPAuditLogs table schema used by the
+    Google Cloud Platform connector.
+    """
+
+    TimeGenerated: datetime.datetime = Field(..., description="Event timestamp in UTC")
+    ServiceName: str = Field(..., description="GCP service (e.g., iam.googleapis.com)")
+    MethodName: str = Field(..., description="API method (e.g., SetIamPolicy)")
+    CallerIP: str = Field(..., description="Caller IP address")
+    PrincipalEmail: str = Field(..., description="Email of the calling principal")
+    ResourceName: str = Field(..., description="Full resource path")
+    ResourceType: str = Field(..., description="Resource type (e.g., gce_instance)")
+    Severity: str = Field(..., description="Log severity: NOTICE, WARNING, ERROR, CRITICAL")
+    ProjectId: str = Field(..., description="GCP project ID")
+    StatusCode: int = Field(0, description="Status code (0 = success)")
+    StatusMessage: str = Field("OK", description="Status message")
+    AuthorizationInfo: str | None = Field(None, description="JSON-encoded authorization details")

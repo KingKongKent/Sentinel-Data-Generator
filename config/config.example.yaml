@@ -174,3 +174,96 @@ scenarios:
     parameters:
       event_type: "service_failure"
       target_host: "app-server-01.contoso.local"
+
+  # ========================================================================
+  # AWS CloudTrail scenarios - ingest to custom AWSCloudTrailDemo_CL table
+  # ========================================================================
+  - name: aws_iam_credential_abuse
+    log_type: aws_cloudtrail
+    stream_name: "Custom-AWSCloudTrailDemo_CL"
+    description: "Simulate AWS IAM abuse — new users, access keys, policy attachments"
+    count: 30
+    parameters:
+      event_type: "iam_abuse"
+      source_ip: "198.51.100.10"
+      target_account: "123456789012"
+
+  - name: aws_s3_exfiltration
+    log_type: aws_cloudtrail
+    stream_name: "Custom-AWSCloudTrailDemo_CL"
+    description: "Simulate S3 data exfiltration — bucket enumeration and mass object download"
+    count: 40
+    parameters:
+      event_type: "s3_exfiltration"
+      source_ip: "198.51.100.11"
+
+  - name: aws_security_tampering
+    log_type: aws_cloudtrail
+    stream_name: "Custom-AWSCloudTrailDemo_CL"
+    description: "Simulate disabling CloudTrail, deleting flow logs, opening security groups"
+    count: 25
+    parameters:
+      event_type: "security_tampering"
+
+  - name: aws_compute_abuse
+    log_type: aws_cloudtrail
+    stream_name: "Custom-AWSCloudTrailDemo_CL"
+    description: "Simulate launching expensive GPU instances in unusual regions"
+    count: 15
+    parameters:
+      event_type: "compute_abuse"
+
+  - name: aws_brute_force_console
+    log_type: aws_cloudtrail
+    stream_name: "Custom-AWSCloudTrailDemo_CL"
+    description: "Simulate brute-force AWS Console login attempts"
+    count: 50
+    parameters:
+      event_type: "credential_brute_force"
+      source_ip: "203.0.113.90"
+
+  # ========================================================================
+  # GCP Audit Logs scenarios - ingest to custom GCPAuditLogsDemo_CL table
+  # ========================================================================
+  - name: gcp_iam_abuse
+    log_type: gcp_audit_logs
+    stream_name: "Custom-GCPAuditLogsDemo_CL"
+    description: "Simulate GCP IAM abuse — service account keys, overly permissive policies"
+    count: 25
+    parameters:
+      event_type: "iam_abuse"
+      source_ip: "198.51.100.30"
+      target_project: "contoso-prod-123456"
+
+  - name: gcp_data_exfiltration
+    log_type: gcp_audit_logs
+    stream_name: "Custom-GCPAuditLogsDemo_CL"
+    description: "Simulate GCS/BigQuery data exfiltration — mass object reads, export jobs"
+    count: 40
+    parameters:
+      event_type: "data_exfiltration"
+
+  - name: gcp_security_tampering
+    log_type: gcp_audit_logs
+    stream_name: "Custom-GCPAuditLogsDemo_CL"
+    description: "Simulate firewall rule deletion, audit log sink removal"
+    count: 20
+    parameters:
+      event_type: "security_tampering"
+
+  - name: gcp_compute_abuse
+    log_type: gcp_audit_logs
+    stream_name: "Custom-GCPAuditLogsDemo_CL"
+    description: "Simulate launching GPU instances for crypto-mining in unusual zones"
+    count: 15
+    parameters:
+      event_type: "compute_abuse"
+
+  - name: gcp_brute_force_auth
+    log_type: gcp_audit_logs
+    stream_name: "Custom-GCPAuditLogsDemo_CL"
+    description: "Simulate brute-force authentication failures against GCP"
+    count: 50
+    parameters:
+      event_type: "credential_brute_force"
+      source_ip: "203.0.113.91"

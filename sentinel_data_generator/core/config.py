@@ -95,6 +95,8 @@ LOG_TYPE_STREAM_MAP: dict[str, str] = {
     "syslog_native": "Custom-SyslogNative",
     "common_security_log": "Custom-CommonSecurityLogDemo_CL",
     "common_security_log_native": "Custom-CommonSecurityLogNative",
+    "aws_cloudtrail": "Custom-AWSCloudTrailDemo_CL",
+    "gcp_audit_logs": "Custom-GCPAuditLogsDemo_CL",
 }
 
 

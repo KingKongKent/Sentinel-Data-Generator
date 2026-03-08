@@ -827,7 +827,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-port-scan')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti — Port Scan Detected",
+        "displayName": "[Demo] Ubiquiti \u2014 Port Scan Detected",
         "description": "Detects a single source IP hitting many destination ports through a Ubiquiti firewall, indicating network reconnaissance or port scanning activity.",
         "severity": "Medium",
         "enabled": true,
@@ -894,7 +894,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-ids-alert')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti — IDS Intrusion Alert",
+        "displayName": "[Demo] Ubiquiti \u2014 IDS Intrusion Alert",
         "description": "Detects intrusion detection alerts from Ubiquiti UniFi appliances. UniFi IDS alerts with high severity may indicate exploitation attempts or active attacks against the network perimeter.",
         "severity": "High",
         "enabled": true,
@@ -962,7 +962,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-ubiquiti-vpn-anomaly')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Ubiquiti — Suspicious VPN Connection",
+        "displayName": "[Demo] Ubiquiti \u2014 Suspicious VPN Connection",
         "description": "Detects VPN connections through Ubiquiti appliances from external IPs that also triggered firewall denies or IDS alerts, indicating a potentially compromised VPN tunnel or unauthorized access.",
         "severity": "High",
         "enabled": true,
@@ -1028,7 +1028,7 @@
       "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-brute-force-pin-cracked')]",
       "kind": "Scheduled",
       "properties": {
-        "displayName": "[Demo] Brute Force PIN Cracked — Successful Guess",
+        "displayName": "[Demo] Brute Force PIN Cracked \u2014 Successful Guess",
         "description": "Detects when a user successfully guesses the secret PIN in the live brute force demo. A successful attempt following multiple failures is a strong indicator that the code was brute-forced.",
         "severity": "High",
         "enabled": true,
@@ -1088,6 +1088,522 @@
           "UserAgent": "UserAgent"
         }
       }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-aws-iam-credential-abuse')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] AWS IAM Credential Abuse",
+        "description": "Detects suspicious IAM activity in AWS CloudTrail \u2014 creating users, access keys, or attaching policies from unusual IPs.",
+        "severity": "High",
+        "enabled": true,
+        "query": "AWSCloudTrailDemo_CL\n| where EventSource == 'iam.amazonaws.com'\n| where EventName in ('CreateUser', 'CreateAccessKey', 'AttachUserPolicy', 'PutUserPolicy', 'CreateLoginProfile')\n| where isempty(ErrorCode)\n| summarize ActionCount = count(), Actions = make_set(EventName), Regions = make_set(AWSRegion), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIPAddress, UserIdentityArn, RecipientAccountId\n| where ActionCount >= 2\n| extend AccountId = RecipientAccountId",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Persistence",
+          "PrivilegeEscalation"
+        ],
+        "techniques": [
+          "T1098",
+          "T1136"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "SourceIPAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "UserIdentityArn"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account",
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ActionCount": "ActionCount",
+          "Actions": "Actions",
+          "Regions": "Regions",
+          "AWSAccount": "AccountId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-aws-s3-exfiltration')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] AWS S3 Data Exfiltration",
+        "description": "Detects high-volume S3 object access or bucket policy changes that may indicate data exfiltration.",
+        "severity": "High",
+        "enabled": true,
+        "query": "AWSCloudTrailDemo_CL\n| where EventSource == 's3.amazonaws.com'\n| where EventName in ('GetObject', 'ListBuckets', 'GetBucketPolicy', 'PutBucketPolicy')\n| where isempty(ErrorCode)\n| summarize ObjectAccesses = countif(EventName == 'GetObject'), PolicyChanges = countif(EventName in ('GetBucketPolicy', 'PutBucketPolicy')), TotalActions = count(), Buckets = make_set(extract(@'/buckets/([^/]+)', 1, RequestParameters)), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIPAddress, UserIdentityArn, RecipientAccountId\n| where ObjectAccesses >= 3 or PolicyChanges >= 1\n| extend AccountId = RecipientAccountId",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Exfiltration",
+          "Collection"
+        ],
+        "techniques": [
+          "T1530"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "SourceIPAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "UserIdentityArn"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account",
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ObjectAccesses": "ObjectAccesses",
+          "PolicyChanges": "PolicyChanges",
+          "Buckets": "Buckets",
+          "AWSAccount": "AccountId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-aws-cloudtrail-tampering')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] AWS CloudTrail Logging Disabled",
+        "description": "Detects when CloudTrail logging is stopped, trails are deleted, or security groups are opened \u2014 indicating defensive evasion or security config tampering.",
+        "severity": "High",
+        "enabled": true,
+        "query": "AWSCloudTrailDemo_CL\n| where EventName in ('StopLogging', 'DeleteTrail', 'DeleteFlowLogs', 'AuthorizeSecurityGroupIngress', 'DisableEbsEncryptionByDefault')\n| where isempty(ErrorCode)\n| summarize ActionCount = count(), Actions = make_set(EventName), Regions = make_set(AWSRegion), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SourceIPAddress, UserIdentityArn, RecipientAccountId\n| extend AccountId = RecipientAccountId",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "DefenseEvasion"
+        ],
+        "techniques": [
+          "T1562"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "SourceIPAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "UserIdentityArn"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account",
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ActionCount": "ActionCount",
+          "Actions": "Actions",
+          "Regions": "Regions",
+          "AWSAccount": "AccountId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-aws-brute-force-console')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] AWS Console Brute Force Login",
+        "description": "Detects multiple failed AWS Console login attempts from the same source IP, indicating a brute force attack against AWS IAM credentials.",
+        "severity": "High",
+        "enabled": true,
+        "query": "AWSCloudTrailDemo_CL\n| where EventName == 'ConsoleLogin'\n| where ErrorCode == 'AccessDenied' or ErrorMessage has 'Failed authentication'\n| summarize FailedAttempts = count(), TargetArns = make_set(UserIdentityArn), TargetAccounts = dcount(UserIdentityArn), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by SourceIPAddress, RecipientAccountId\n| where FailedAttempts >= 5\n| extend Duration = LastAttempt - FirstAttempt, AccountId = RecipientAccountId",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "CredentialAccess",
+          "InitialAccess"
+        ],
+        "techniques": [
+          "T1110"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "SourceIPAddress"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "FailedAttempts": "FailedAttempts",
+          "TargetAccounts": "TargetAccounts",
+          "Duration": "Duration",
+          "AWSAccount": "AccountId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-gcp-iam-abuse')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] GCP IAM Policy Modification",
+        "description": "Detects suspicious IAM policy changes in GCP \u2014 creating service account keys, setting overly permissive IAM policies, or creating new service accounts.",
+        "severity": "High",
+        "enabled": true,
+        "query": "GCPAuditLogsDemo_CL\n| where ServiceName == 'iam.googleapis.com'\n| where MethodName has_any ('CreateServiceAccountKey', 'SetIamPolicy', 'CreateServiceAccount')\n| where StatusCode == 0\n| summarize ActionCount = count(), Methods = make_set(MethodName), Resources = make_set(ResourceName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by CallerIP, PrincipalEmail, ProjectId\n| where ActionCount >= 2",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Persistence",
+          "PrivilegeEscalation"
+        ],
+        "techniques": [
+          "T1098",
+          "T1136"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "CallerIP"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "PrincipalEmail"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account",
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ActionCount": "ActionCount",
+          "Methods": "Methods",
+          "Resources": "Resources",
+          "GCPProject": "ProjectId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-gcp-data-exfiltration')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] GCP Data Exfiltration",
+        "description": "Detects high-volume GCS object access or BigQuery export jobs that may indicate data exfiltration from GCP resources.",
+        "severity": "High",
+        "enabled": true,
+        "query": "GCPAuditLogsDemo_CL\n| where ServiceName in ('storage.googleapis.com', 'bigquery.googleapis.com')\n| where MethodName in ('storage.objects.get', 'storage.objects.list', 'storage.buckets.getIamPolicy', 'jobservice.insert')\n| where StatusCode == 0\n| summarize ObjectReads = countif(MethodName == 'storage.objects.get'), BQExports = countif(MethodName == 'jobservice.insert'), TotalActions = count(), Resources = make_set(ResourceName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by CallerIP, PrincipalEmail, ProjectId\n| where ObjectReads >= 3 or BQExports >= 1",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "Exfiltration",
+          "Collection"
+        ],
+        "techniques": [
+          "T1530"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "CallerIP"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "PrincipalEmail"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account",
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ObjectReads": "ObjectReads",
+          "BQExports": "BQExports",
+          "Resources": "Resources",
+          "GCPProject": "ProjectId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-gcp-security-tampering')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] GCP Security Config Tampering",
+        "description": "Detects deletion or modification of firewall rules and audit log sinks in GCP, indicating defensive evasion or security config tampering.",
+        "severity": "High",
+        "enabled": true,
+        "query": "GCPAuditLogsDemo_CL\n| where MethodName has_any ('firewalls.delete', 'firewalls.insert', 'DeleteSink', 'UpdateSink')\n| where StatusCode == 0\n| summarize ActionCount = count(), Methods = make_set(MethodName), Resources = make_set(ResourceName), Services = make_set(ServiceName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by CallerIP, PrincipalEmail, ProjectId",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "DefenseEvasion"
+        ],
+        "techniques": [
+          "T1562"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "CallerIP"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "PrincipalEmail"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "Account",
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "ActionCount": "ActionCount",
+          "Methods": "Methods",
+          "Services": "Services",
+          "GCPProject": "ProjectId"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+      "apiVersion": "2023-02-01-preview",
+      "name": "[concat(parameters('workspaceName'), '/Microsoft.SecurityInsights/demo-gcp-brute-force-auth')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "[Demo] GCP Brute Force Authentication",
+        "description": "Detects multiple authentication failures from the same IP in GCP, indicating a brute force attack against GCP identities.",
+        "severity": "High",
+        "enabled": true,
+        "query": "GCPAuditLogsDemo_CL\n| where MethodName has 'loginFailure'\n| where StatusCode == 7\n| summarize FailedAttempts = count(), TargetPrincipals = make_set(PrincipalEmail), TargetCount = dcount(PrincipalEmail), Projects = make_set(ProjectId), FirstAttempt = min(TimeGenerated), LastAttempt = max(TimeGenerated) by CallerIP\n| where FailedAttempts >= 5\n| extend Duration = LastAttempt - FirstAttempt",
+        "queryFrequency": "PT6H",
+        "queryPeriod": "PT7H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionDuration": "PT6H",
+        "suppressionEnabled": true,
+        "tactics": [
+          "CredentialAccess",
+          "InitialAccess"
+        ],
+        "techniques": [
+          "T1110"
+        ],
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "CallerIP"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT24H",
+            "matchingMethod": "Selected",
+            "groupByEntities": [
+              "IP"
+            ],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        },
+        "customDetails": {
+          "FailedAttempts": "FailedAttempts",
+          "TargetCount": "TargetCount",
+          "Duration": "Duration",
+          "Projects": "Projects"
+        }
+      }
     }
   ],
   "outputs": {
@@ -1105,10 +1621,18 @@
         "[Demo] SSH Brute Force Attack on Linux",
         "[Demo] Suspicious Sudo Activity",
         "[Demo] Critical Service Failure Detected",
-        "[Demo] Ubiquiti — Port Scan Detected",
-        "[Demo] Ubiquiti — IDS Intrusion Alert",
-        "[Demo] Ubiquiti — Suspicious VPN Connection",
-        "[Demo] Brute Force PIN Cracked — Successful Guess"
+        "[Demo] Ubiquiti \u2014 Port Scan Detected",
+        "[Demo] Ubiquiti \u2014 IDS Intrusion Alert",
+        "[Demo] Ubiquiti \u2014 Suspicious VPN Connection",
+        "[Demo] Brute Force PIN Cracked \u2014 Successful Guess",
+        "[Demo] AWS IAM Credential Abuse",
+        "[Demo] AWS S3 Data Exfiltration",
+        "[Demo] AWS CloudTrail Logging Disabled",
+        "[Demo] AWS Console Brute Force Login",
+        "[Demo] GCP IAM Policy Modification",
+        "[Demo] GCP Data Exfiltration",
+        "[Demo] GCP Security Config Tampering",
+        "[Demo] GCP Brute Force Authentication"
       ]
     }
   }

@@ -36,6 +36,8 @@ var signinLogTable = 'SigninLogDemo_CL'
 var syslogTable = 'SyslogDemo_CL'
 var commonSecurityLogTable = 'CommonSecurityLogDemo_CL'
 var bruteForceDemoTable = 'BruteForceDemo_CL'
+var awsCloudTrailTable = 'AWSCloudTrailDemo_CL'
+var gcpAuditLogsTable = 'GCPAuditLogsDemo_CL'
 
 // Stream names (must start with Custom-)
 var securityEventStream = 'Custom-${securityEventTable}'
@@ -43,6 +45,8 @@ var signinLogStream = 'Custom-${signinLogTable}'
 var syslogStream = 'Custom-${syslogTable}'
 var commonSecurityLogStream = 'Custom-${commonSecurityLogTable}'
 var bruteForceDemoStream = 'Custom-${bruteForceDemoTable}'
+var awsCloudTrailStream = 'Custom-${awsCloudTrailTable}'
+var gcpAuditLogsStream = 'Custom-${gcpAuditLogsTable}'
 
 // Native table streams for live tables
 var commonSecurityLogNativeStream = 'Custom-CommonSecurityLogNative'
@@ -188,6 +192,57 @@ resource bruteForceDemoTable_resource 'Microsoft.OperationalInsights/workspaces/
   }
 }
 
+resource awsCloudTrailDemoTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: workspace
+  name: awsCloudTrailTable
+  properties: {
+    schema: {
+      name: awsCloudTrailTable
+      columns: [
+        { name: 'TimeGenerated', type: 'dateTime', description: 'Event timestamp in UTC' }
+        { name: 'EventName', type: 'string', description: 'AWS API action name' }
+        { name: 'EventSource', type: 'string', description: 'AWS service source (e.g. iam.amazonaws.com)' }
+        { name: 'SourceIPAddress', type: 'string', description: 'Caller IP address' }
+        { name: 'UserIdentityArn', type: 'string', description: 'ARN of the calling identity' }
+        { name: 'UserIdentityType', type: 'string', description: 'Identity type (Root, IAMUser, AssumedRole)' }
+        { name: 'UserAgent', type: 'string', description: 'User agent string' }
+        { name: 'AWSRegion', type: 'string', description: 'AWS region of the request' }
+        { name: 'RecipientAccountId', type: 'string', description: 'Target AWS account ID' }
+        { name: 'ErrorCode', type: 'string', description: 'Error code if request failed' }
+        { name: 'ErrorMessage', type: 'string', description: 'Error message if request failed' }
+        { name: 'RequestParameters', type: 'string', description: 'JSON request parameters' }
+        { name: 'ResponseElements', type: 'string', description: 'JSON response elements' }
+      ]
+    }
+    retentionInDays: 30
+  }
+}
+
+resource gcpAuditLogsDemoTable 'Microsoft.OperationalInsights/workspaces/tables@2022-10-01' = {
+  parent: workspace
+  name: gcpAuditLogsTable
+  properties: {
+    schema: {
+      name: gcpAuditLogsTable
+      columns: [
+        { name: 'TimeGenerated', type: 'dateTime', description: 'Event timestamp in UTC' }
+        { name: 'ServiceName', type: 'string', description: 'GCP service (e.g. iam.googleapis.com)' }
+        { name: 'MethodName', type: 'string', description: 'API method called' }
+        { name: 'CallerIP', type: 'string', description: 'Caller IP address' }
+        { name: 'PrincipalEmail', type: 'string', description: 'Authenticated principal email' }
+        { name: 'ResourceName', type: 'string', description: 'Target resource path' }
+        { name: 'ResourceType', type: 'string', description: 'Resource type' }
+        { name: 'Severity', type: 'string', description: 'Log severity (NOTICE, WARNING, ERROR)' }
+        { name: 'ProjectId', type: 'string', description: 'GCP project ID' }
+        { name: 'StatusCode', type: 'int', description: 'gRPC status code (0=OK)' }
+        { name: 'StatusMessage', type: 'string', description: 'Status message' }
+        { name: 'AuthorizationInfo', type: 'string', description: 'JSON authorization details' }
+      ]
+    }
+    retentionInDays: 30
+  }
+}
+
 // ============================================================================
 // Data Collection Rule
 // ============================================================================
@@ -202,6 +257,8 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
     syslogDemoTable
     commonSecurityLogDemoTable
     bruteForceDemoTable_resource
+    awsCloudTrailDemoTable
+    gcpAuditLogsDemoTable
   ]
   properties: {
     dataCollectionEndpointId: dataCollectionEndpoint.id
@@ -305,6 +362,41 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
           { name: 'SyslogMessage', type: 'string' }
         ]
       }
+      // Stream for AWS CloudTrail demo table
+      '${awsCloudTrailStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'EventName', type: 'string' }
+          { name: 'EventSource', type: 'string' }
+          { name: 'SourceIPAddress', type: 'string' }
+          { name: 'UserIdentityArn', type: 'string' }
+          { name: 'UserIdentityType', type: 'string' }
+          { name: 'UserAgent', type: 'string' }
+          { name: 'AWSRegion', type: 'string' }
+          { name: 'RecipientAccountId', type: 'string' }
+          { name: 'ErrorCode', type: 'string' }
+          { name: 'ErrorMessage', type: 'string' }
+          { name: 'RequestParameters', type: 'string' }
+          { name: 'ResponseElements', type: 'string' }
+        ]
+      }
+      // Stream for GCP Audit Logs demo table
+      '${gcpAuditLogsStream}': {
+        columns: [
+          { name: 'TimeGenerated', type: 'datetime' }
+          { name: 'ServiceName', type: 'string' }
+          { name: 'MethodName', type: 'string' }
+          { name: 'CallerIP', type: 'string' }
+          { name: 'PrincipalEmail', type: 'string' }
+          { name: 'ResourceName', type: 'string' }
+          { name: 'ResourceType', type: 'string' }
+          { name: 'Severity', type: 'string' }
+          { name: 'ProjectId', type: 'string' }
+          { name: 'StatusCode', type: 'int' }
+          { name: 'StatusMessage', type: 'string' }
+          { name: 'AuthorizationInfo', type: 'string' }
+        ]
+      }
     }
     destinations: {
       logAnalytics: [
@@ -344,6 +436,18 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
         destinations: [ 'sentinel-workspace' ]
         transformKql: 'source'
         outputStream: bruteForceDemoStream
+      }
+      {
+        streams: [ awsCloudTrailStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: awsCloudTrailStream
+      }
+      {
+        streams: [ gcpAuditLogsStream ]
+        destinations: [ 'sentinel-workspace' ]
+        transformKql: 'source'
+        outputStream: gcpAuditLogsStream
       }
       {
         streams: [ commonSecurityLogNativeStream ]
@@ -397,3 +501,9 @@ output syslogNativeStreamName string = syslogNativeStream
 
 @description('Stream name for BruteForceDemo live demo data.')
 output bruteForceDemoStreamName string = bruteForceDemoStream
+
+@description('Stream name for AWS CloudTrail demo data.')
+output awsCloudTrailStreamName string = awsCloudTrailStream
+
+@description('Stream name for GCP Audit Logs demo data.')
+output gcpAuditLogsStreamName string = gcpAuditLogsStream
