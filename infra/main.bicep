@@ -552,16 +552,9 @@ resource dataCollectionRule 'Microsoft.Insights/dataCollectionRules@2023-03-11' 
         outputStream: gcpAuditLogsStream
       }
       {
-        streams: [ purviewDlpStream ]
+        streams: [ purviewDlpStream, defenderOfficeStream ]
         destinations: [ 'sentinel-workspace' ]
         transformKql: 'source'
-        outputStream: purviewDlpStream
-      }
-      {
-        streams: [ defenderOfficeStream ]
-        destinations: [ 'sentinel-workspace' ]
-        transformKql: 'source'
-        outputStream: defenderOfficeStream
       }
       {
         streams: [ commonSecurityLogNativeStream ]
