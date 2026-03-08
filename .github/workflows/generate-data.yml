@@ -88,13 +88,15 @@ jobs:
           echo "| Log level | ${{ github.event.inputs.log_level || 'INFO' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Scenarios Executed (15 total)" >> $GITHUB_STEP_SUMMARY
+          echo "### Scenarios Executed (25 total)" >> $GITHUB_STEP_SUMMARY
           echo "| Table | Scenarios |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-----------|" >> $GITHUB_STEP_SUMMARY
           echo "| **SecurityEventDemo_CL** | brute_force_login, privilege_escalation |" >> $GITHUB_STEP_SUMMARY
           echo "| **CommonSecurityLog** (native) | firewall_traffic, ids_intrusion_detection, threat_intel_matches, ubiquiti_firewall_traffic, firewall_deny_scan, ubiquiti_port_scan, ubiquiti_ids_vpn |" >> $GITHUB_STEP_SUMMARY
           echo "| **SigninLogDemo_CL** | suspicious_signins, brute_force_aad, credential_stuffing |" >> $GITHUB_STEP_SUMMARY
           echo "| **SyslogDemo_CL** | ssh_brute_force, linux_sudo_abuse, service_anomalies |" >> $GITHUB_STEP_SUMMARY
+          echo "| **AWSCloudTrailDemo_CL** | aws_iam_credential_abuse, aws_s3_exfiltration, aws_security_tampering, aws_compute_abuse, aws_console_brute_force |" >> $GITHUB_STEP_SUMMARY
+          echo "| **GCPAuditLogsDemo_CL** | gcp_iam_policy_changes, gcp_data_exfiltration, gcp_security_config_tampering, gcp_compute_abuse, gcp_brute_force_auth |" >> $GITHUB_STEP_SUMMARY
 
   docker-build:
     name: Build Docker Image
