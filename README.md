@@ -6,11 +6,13 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 
 ## Features
 
-- **Realistic security event generation** — 4 log types with 14 scenarios:
+- **Realistic security event generation** — 6 log types with 25 scenarios:
   - **Windows SecurityEvent** — brute-force attacks, privilege escalation (Event IDs 4624, 4625, 4648, 4672, 4688, 4720, 4726)
-  - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler
+  - **CommonSecurityLog** — CEF format with firewall, IDS, malware, threat intel events from Palo Alto, Fortinet, Cisco, Check Point, Zscaler, Ubiquiti
   - **SigninLogs** — Microsoft Entra ID sign-in events with brute-force, credential stuffing, impossible travel scenarios
   - **Syslog** — Linux system events with SSH authentication, sudo abuse, service failures
+  - **AWS CloudTrail** — IAM credential abuse, S3 data exfiltration, security tampering, compute abuse, console brute force
+  - **GCP Audit Logs** — IAM policy changes, data exfiltration, security config tampering, compute abuse, brute force auth
 - **Live Brute Force Demo** — interactive web app where audiences try to crack a 4-digit PIN in real time, with every attempt logged to Sentinel’s `BruteForceDemo_CL` table. Includes a collapsible **"Try in Sentinel"** panel with ready-to-use Copilot prompts and KQL queries (see [brute-force-demo/](brute-force-demo/))
 - **Scenario-driven** — configure brute-force attacks, privilege escalation, anomalous sign-ins, and more via YAML
 - **Multiple output targets** — send to Azure Log Analytics (`log_analytics`), write to local file (`file` — JSON/CSV), or print to console (`stdout`)
@@ -18,7 +20,7 @@ Use it to populate Sentinel with realistic data for testing analytics rules, wor
 - **Pydantic v2 validation** — all generated events are validated against strict schemas before output
 - **Configurable** — control event count, time range, random seed, and per-scenario parameters
 - **Infrastructure-as-Code** — includes Bicep templates to deploy DCE, DCR, custom tables, workbook, and analytic rules
-- **Sentinel content included** — pre-built workbook with 7 visualization tabs (including Brute Force leaderboard and "Who Cracked the PIN?" panels) and 15 detection rules
+- **Sentinel content included** — pre-built workbook with 9 visualization tabs (including AWS CloudTrail, GCP Audit Logs, Brute Force leaderboard, and "Who Cracked the PIN?" panels) and 23 detection rules
 - **Extensible** — add new log types by subclassing `BaseGenerator` and registering in the engine
 
 ## Prerequisites
@@ -55,8 +57,8 @@ pip install -r requirements.txt
 
 The project includes a Bicep template (`infra/main.bicep`) that creates:
 - A **Data Collection Endpoint** (DCE)
-- Four **custom Log Analytics tables** (`SecurityEventDemo_CL`, `SigninLogDemo_CL`, `SyslogDemo_CL`, `CommonSecurityLogDemo_CL`)
-- A **Data Collection Rule** (DCR) with stream declarations and data flows for all four tables
+- Four **custom Log Analytics tables** (`SecurityEventDemo_CL`, `SigninLogDemo_CL`, `SyslogDemo_CL`, `CommonSecurityLogDemo_CL`, `BruteForceDemo_CL`, `AWSCloudTrailDemo_CL`, `GCPAuditLogsDemo_CL`)
+- A **Data Collection Rule** (DCR) with stream declarations and data flows for all seven tables
 
 **Prerequisites:** Azure CLI with Bicep support (`az bicep install`).
 
@@ -169,8 +171,8 @@ Sentinel-Data-Generator/
 │   ├── main.bicepparam             # Deployment parameters
 │   ├── deploy.ps1                  # PowerShell deployment script
 │   ├── deploy.sh                   # Bash deployment script
-│   ├── workbook.json               # Sentinel workbook (7 tabs)
-│   └── analytic-rules.json         # 15 Sentinel detection rules
+│   ├── workbook.json               # Sentinel workbook (9 tabs)
+│   └── analytic-rules.json         # 23 Sentinel detection rules
 ├── config/
 │   └── config.example.yaml         # Example YAML configuration
 ├── notebooks/
@@ -188,10 +190,12 @@ Sentinel-Data-Generator/
 │   │   ├── security_event.py      # Windows SecurityEvent generator
 │   │   ├── common_security_log.py # CEF CommonSecurityLog generator
 │   │   ├── signin_logs.py         # Microsoft Entra ID SigninLogs generator
-│   │   └── syslog.py              # Linux Syslog generator
+│   │   ├── syslog.py              # Linux Syslog generator
+│   │   ├── aws_cloudtrail.py      # AWS CloudTrail generator
+│   │   └── gcp_audit_logs.py      # GCP Audit Logs generator
 │   ├── models/
 │   │   ├── __init__.py
-│   │   └── schemas.py             # Pydantic v2 models (4 log types)
+│   │   └── schemas.py             # Pydantic v2 models (6 log types)
 │   ├── outputs/
 │   │   ├── __init__.py
 │   │   ├── base.py                # BaseOutput ABC
@@ -268,7 +272,7 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | `generation` | `time_range.end` | ISO 8601 UTC end datetime |
 | `generation` | `seed` | Random seed for reproducibility |
 | `scenarios[]` | `name` | Scenario identifier |
-| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native`, `signin_logs`, `syslog` |
+| `scenarios[]` | `log_type` | Generator type: `security_event`, `common_security_log_native`, `signin_logs`, `syslog`, `aws_cloudtrail`, `gcp_audit_logs` |
 | `scenarios[]` | `stream_name` | Override stream for this scenario |
 | `scenarios[]` | `count` | Override event count for this scenario |
 | `scenarios[]` | `parameters` | Generator-specific parameters |
@@ -290,6 +294,8 @@ Configuration is YAML-based with Pydantic validation. Values can be overridden v
 | SigninLogs | `signin_logs` | `SigninLogDemo_CL` (custom) | ✅ Implemented |
 | Syslog | `syslog` | `SyslogDemo_CL` (custom) | ✅ Implemented |
 | BruteForceDemo | Live audience demo | `BruteForceDemo_CL` (custom) | ✅ Implemented |
+| AWSCloudTrail | `aws_cloudtrail` | `AWSCloudTrailDemo_CL` (custom) | ✅ Implemented |
+| GCPAuditLogs | `gcp_audit_logs` | `GCPAuditLogsDemo_CL` (custom) | ✅ Implemented |
 
 ### SecurityEvent Generator
 
@@ -394,6 +400,51 @@ Generates Linux syslog events for the `SyslogDemo_CL` custom table. Supports mul
 
 **Generated fields include:** `TimeGenerated`, `Facility`, `SeverityLevel`, `Computer`, `HostIP`, `ProcessName`, `ProcessID`, `SyslogMessage`.
 
+### AWS CloudTrail Generator
+
+Generates AWS CloudTrail audit log events for the `AWSCloudTrailDemo_CL` custom table. Simulates multi-account AWS environments with realistic attack scenarios:
+
+| Scenario | Description |
+|----------|-------------|
+| `aws_iam_credential_abuse` | Creating IAM users, access keys, attaching admin policies |
+| `aws_s3_exfiltration` | Listing/getting objects from S3, disabling bucket encryption |
+| `aws_security_tampering` | Disabling CloudTrail, deleting flow logs, opening security groups |
+| `aws_compute_abuse` | Launching large EC2 instances, crypto-mining patterns |
+| `aws_console_brute_force` | Multiple failed ConsoleLogin attempts |
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `attack_type` | `string` | Scenario type (optional — randomized if omitted) |
+| `source_ip` | `string` | Attacker source IP (optional) |
+| `aws_region` | `string` | Target AWS region (optional — randomized if omitted) |
+| `account_id` | `string` | Target AWS account ID (optional — randomized if omitted) |
+
+**Generated fields include:** `TimeGenerated`, `EventName`, `EventSource`, `SourceIPAddress`, `UserIdentityArn`, `UserIdentityType`, `UserAgent`, `AWSRegion`, `RecipientAccountId`, `ErrorCode`, `ErrorMessage`, `RequestParameters`, `ResponseElements`.
+
+### GCP Audit Logs Generator
+
+Generates GCP Audit Log events for the `GCPAuditLogsDemo_CL` custom table. Simulates multi-project GCP environments with realistic attack scenarios:
+
+| Scenario | Description |
+|----------|-------------|
+| `gcp_iam_policy_changes` | Setting IAM policies, creating service accounts, adding role bindings |
+| `gcp_data_exfiltration` | Accessing BigQuery datasets, copying Cloud Storage objects |
+| `gcp_security_config_tampering` | Disabling audit logging, modifying firewall rules |
+| `gcp_compute_abuse` | Creating large VM instances, crypto-mining patterns |
+| `gcp_brute_force_auth` | Multiple failed authentication attempts |
+
+**Scenario parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `attack_type` | `string` | Scenario type (optional — randomized if omitted) |
+| `caller_ip` | `string` | Attacker IP (optional) |
+| `project_id` | `string` | Target GCP project ID (optional — randomized if omitted) |
+
+**Generated fields include:** `TimeGenerated`, `ServiceName`, `MethodName`, `CallerIP`, `PrincipalEmail`, `ResourceName`, `ResourceType`, `Severity`, `ProjectId`, `StatusCode`, `StatusMessage`, `AuthorizationInfo`.
+
 ## Brute Force Demo (Live Audience)
 
 The `brute-force-demo/` folder contains a standalone interactive web app for live presentations. Your audience visits a web page and tries to guess a secret 4-digit PIN — every attempt is logged in real time to the `BruteForceDemo_CL` table in Sentinel.
@@ -493,7 +544,7 @@ Pre-built Sentinel content is included for immediate use with the generated demo
 
 ### Analysis Notebook
 
-A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tables directly in the **Microsoft Sentinel Data Lake**. Built following the [official documentation](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebooks) using the `MicrosoftSentinelProvider` class, PySpark DataFrames, and `matplotlib`.
+A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 7 tables directly in the **Microsoft Sentinel Data Lake**. Built following the [official documentation](https://learn.microsoft.com/en-us/azure/sentinel/datalake/notebooks) using the `MicrosoftSentinelProvider` class, PySpark DataFrames, and `matplotlib`.
 
 - **Setup** — Initializes `MicrosoftSentinelProvider(spark)` and lists available workspaces
 - **Overview** — Event distribution across all tables (pie chart)
@@ -501,7 +552,11 @@ A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tab
 - **CommonSecurityLog** — Vendor breakdown, threat intelligence matches, firewall denies
 - **SigninLogDemo_CL** — Sign-in results, risky sign-ins, success/failure by location
 - **SyslogDemo_CL** — Facility/severity breakdown, SSH failures, service errors
-- **Dashboard** — Combined 2×2 visualization summary
+- **BruteForceDemo_CL** — Leaderboard, PIN distribution, attempt timeline, source IP analysis
+- **AWSCloudTrailDemo_CL** — Service breakdown, top API actions, failed calls, IAM abuse, region distribution
+- **GCPAuditLogsDemo_CL** — Service breakdown, top methods, failed operations, IAM activity, severity distribution
+- **Alerts & Incidents** — Alert/incident analysis from [Demo] analytic rules
+- **Dashboard** — Combined 3×2 visualization summary
 - **Key Findings** — Automated security summary with counts
 
 **To use:**
@@ -516,7 +571,7 @@ A Jupyter notebook (`notebooks/sentinel_analysis.ipynb`) for analyzing all 4 tab
 
 ### Workbook
 
-The workbook (`infra/workbook.json`) provides 7 visualization tabs:
+The workbook (`infra/workbook.json`) provides 9 visualization tabs:
 
 | Tab | Visualizations |
 |-----|---------------|
@@ -525,6 +580,8 @@ The workbook (`infra/workbook.json`) provides 7 visualization tabs:
 | **CommonSecurityLog** | Firewall events by vendor, threat intel matches |
 | **Sign-in Logs** | Sign-in results by location, risky sign-ins, location summary table |
 | **Syslog** | Events by facility and severity, SSH failures |
+| **AWS CloudTrail** | Events by service, top API actions, region distribution, failed calls, IAM activity, top IPs |
+| **GCP Audit Logs** | Events by service, top methods, severity, failed operations, IAM activity, top IPs |
 | **Alerts & Incidents** | Active alerts, incident timeline, severity breakdown |
 | **Brute Force Demo** | Summary tiles, live timeline, per-nickname stats, most-guessed PINs, 🏆 Leaderboard, 🎉 Who Cracked the PIN?, Try in Sentinel prompts |
 
@@ -539,7 +596,7 @@ az deployment group create \
 
 ### Analytic Rules
 
-15 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
+23 detection rules (`infra/analytic-rules.json`) covering all demo scenarios:
 
 | Rule | Log Type | Description |
 |------|----------|-------------|
@@ -558,6 +615,14 @@ az deployment group create \
 | Suspicious Sudo Activity | SyslogDemo_CL | Multiple sudo failures |
 | Critical Service Failure | SyslogDemo_CL | Service failure events |
 | [Demo] Brute Force PIN Cracked | BruteForceDemo_CL | Successful PIN guess after prior failures |
+| AWS IAM Credential Abuse | AWSCloudTrailDemo_CL | Suspicious IAM user/key creation |
+| AWS S3 Data Exfiltration | AWSCloudTrailDemo_CL | Unusual S3 data access patterns |
+| AWS CloudTrail Logging Disabled | AWSCloudTrailDemo_CL | Attacker disabling audit logging |
+| AWS Console Brute Force Login | AWSCloudTrailDemo_CL | Multiple failed console logins |
+| GCP IAM Policy Modification | GCPAuditLogsDemo_CL | Suspicious IAM policy changes |
+| GCP Data Exfiltration | GCPAuditLogsDemo_CL | Unusual data access/export |
+| GCP Security Config Tampering | GCPAuditLogsDemo_CL | Disabling security controls |
+| GCP Brute Force Authentication | GCPAuditLogsDemo_CL | Multiple failed auth attempts |
 
 **Deploy the analytic rules:**
 

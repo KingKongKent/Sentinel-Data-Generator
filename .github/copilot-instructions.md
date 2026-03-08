@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a **Python CLI tool** that generates realistic demo/test log data for **Microsoft Sentinel**. It simulates security events (sign-ins, Windows security events, syslog, CEF) and sends them to an Azure Log Analytics workspace via the **Azure Monitor Logs Ingestion API** (Data Collection Endpoint + Data Collection Rule), or outputs them locally as JSON/CSV.
+This is a **Python CLI tool** that generates realistic demo/test log data for **Microsoft Sentinel**. It simulates security events (sign-ins, Windows security events, syslog, CEF, AWS CloudTrail, GCP Audit Logs) and sends them to an Azure Log Analytics workspace via the **Azure Monitor Logs Ingestion API** (Data Collection Endpoint + Data Collection Rule), or outputs them locally as JSON/CSV.
 
 ## Tech Stack
 
@@ -60,12 +60,14 @@ This is a **Python CLI tool** that generates realistic demo/test log data for **
 - Log schemas must match the **Data Collection Rule (DCR)** stream schema exactly.
 - Timestamps must be in **ISO 8601 UTC** format (`datetime.datetime.now(datetime.timezone.utc).isoformat()`).
 - Reuse the `LogsIngestionClient` instance — do not create a new client per batch (singleton pattern in `LogAnalyticsOutput`).
-- The Bicep IaC template (`infra/main.bicep`) defines five custom tables and their DCR streams:
+- The Bicep IaC template (`infra/main.bicep`) defines seven custom tables and their DCR streams:
   - `Custom-SecurityEventDemo_CL`
   - `Custom-SigninLogDemo_CL`
   - `Custom-SyslogDemo_CL`
   - `Custom-CommonSecurityLogDemo_CL`
   - `Custom-BruteForceDemo_CL`
+  - `Custom-AWSCloudTrailDemo_CL`
+  - `Custom-GCPAuditLogsDemo_CL`
 
 ### Data Generation
 - Each generator must produce data conforming to the target Sentinel table schema.
@@ -179,7 +181,7 @@ A standalone interactive web app for live presentations. Separate from the Pytho
 - To edit workbook items programmatically, parse the outer ARM JSON, then parse the `serializedData` string of the target item, modify it, re-serialize, and write back.
 
 #### Analytic Rules
-- `infra/analytic-rules.json` contains 12 detection rules (ARM template).
+- `infra/analytic-rules.json` contains 23 detection rules (ARM template).
 - The brute-force demo rule (`[Demo] Brute Force PIN Cracked`) queries `BruteForceDemo_CL`, joins successes with prior failures, maps to MITRE T1110, and runs every 5 minutes.
 
 #### Toggle Script
