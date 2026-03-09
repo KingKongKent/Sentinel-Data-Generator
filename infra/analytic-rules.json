@@ -1615,7 +1615,7 @@
         "description": "Detects a user triggering many DLP policy matches across workloads in a short period, indicating potential data exfiltration or careless handling of sensitive data.",
         "severity": "High",
         "enabled": true,
-        "query": "PurviewDLPDemo_CL\n| where Operation == 'DLPRuleMatch'\n| summarize ViolationCount = count(), Workloads = make_set(Workload), Policies = make_set(PolicyName), SensitiveTypes = make_set(SensitiveInfoType), TotalSensitiveItems = sum(SensitiveInfoCount), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId, ClientIP\n| where ViolationCount >= 5\n| extend Duration = LastEvent - FirstEvent",
+        "query": "PurviewDLPDemo_CL\n| where Operation == 'DLPRuleMatch'\n| summarize ViolationCount = count(), Workloads = make_set(Workload), Policies = make_set(PolicyName), SensitiveTypes = make_set(SensitiveInfoType), TotalSensitiveItems = sum(SensitiveInfoCount), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated), TopFileName = take_any(FileName), TopFilePath = take_any(FilePath), TopPolicy = take_any(PolicyName), TopSensitiveType = take_any(SensitiveInfoType) by UserId, ClientIP\n| where ViolationCount >= 5\n| extend Duration = LastEvent - FirstEvent",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -1648,6 +1648,19 @@
                 "columnName": "ClientIP"
               }
             ]
+          },
+          {
+            "entityType": "File",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopFileName"
+              },
+              {
+                "identifier": "Directory",
+                "columnName": "TopFilePath"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -1658,17 +1671,16 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
-              "Account"
+              "Account",
+              "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
         },
         "customDetails": {
-          "ViolationCount": "ViolationCount",
-          "TotalSensitiveItems": "TotalSensitiveItems",
-          "Workloads": "Workloads",
-          "Duration": "Duration"
+          "Policy": "TopPolicy",
+          "SensitiveInfoType": "TopSensitiveType"
         }
       }
     },
@@ -1682,7 +1694,7 @@
         "description": "Detects users downgrading or removing sensitivity labels from multiple documents, which may indicate an attempt to bypass data-protection controls.",
         "severity": "Medium",
         "enabled": true,
-        "query": "PurviewDLPDemo_CL\n| where Operation in ('SensitivityLabelDowngraded', 'SensitivityLabelRemoved')\n| summarize DowngradeCount = count(), Files = make_set(FileName), Workloads = make_set(Workload), Labels = make_set(SensitivityLabel), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId\n| where DowngradeCount >= 3",
+        "query": "PurviewDLPDemo_CL\n| where Operation in ('SensitivityLabelDowngraded', 'SensitivityLabelRemoved')\n| summarize DowngradeCount = count(), Files = make_set(FileName), Workloads = make_set(Workload), Labels = make_set(SensitivityLabel), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated), TopFileName = take_any(FileName), TopFilePath = take_any(FilePath), TopClientIP = take_any(ClientIP), TopLabel = take_any(SensitivityLabel) by UserId\n| where DowngradeCount >= 3",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -1704,6 +1716,28 @@
                 "columnName": "UserId"
               }
             ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopClientIP"
+              }
+            ]
+          },
+          {
+            "entityType": "File",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopFileName"
+              },
+              {
+                "identifier": "Directory",
+                "columnName": "TopFilePath"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -1721,9 +1755,7 @@
           }
         },
         "customDetails": {
-          "DowngradeCount": "DowngradeCount",
-          "Files": "Files",
-          "Labels": "Labels"
+          "SensitivityLabel": "TopLabel"
         }
       }
     },
@@ -1737,7 +1769,7 @@
         "description": "Detects DLP policy violations associated with external sharing of sensitive content via SharePoint, OneDrive, or Exchange.",
         "severity": "High",
         "enabled": true,
-        "query": "PurviewDLPDemo_CL\n| where Operation in ('DLPRuleMatch', 'SharingSet')\n| where Actions == 'BlockAccess' or Severity == 'High'\n| summarize ShareCount = count(), SensitiveTypes = make_set(SensitiveInfoType), Files = make_set(FileName), TotalItems = sum(SensitiveInfoCount), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId, Workload, ClientIP\n| where ShareCount >= 3",
+        "query": "PurviewDLPDemo_CL\n| where Operation in ('DLPRuleMatch', 'SharingSet')\n| where Actions == 'BlockAccess' or Severity == 'High'\n| summarize ShareCount = count(), SensitiveTypes = make_set(SensitiveInfoType), Files = make_set(FileName), TotalItems = sum(SensitiveInfoCount), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated), TopFileName = take_any(FileName), TopFilePath = take_any(FilePath), TopPolicy = take_any(PolicyName), TopSensitiveType = take_any(SensitiveInfoType) by UserId, Workload, ClientIP\n| where ShareCount >= 3",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -1768,6 +1800,19 @@
                 "columnName": "ClientIP"
               }
             ]
+          },
+          {
+            "entityType": "File",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopFileName"
+              },
+              {
+                "identifier": "Directory",
+                "columnName": "TopFilePath"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -1778,16 +1823,16 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
-              "Account"
+              "Account",
+              "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
         },
         "customDetails": {
-          "ShareCount": "ShareCount",
-          "TotalItems": "TotalItems",
-          "SensitiveTypes": "SensitiveTypes"
+          "Policy": "TopPolicy",
+          "SensitiveInfoType": "TopSensitiveType"
         }
       }
     },
@@ -1801,7 +1846,7 @@
         "description": "Detects removal of Information Rights Management (IRM) protection from documents that were classified as Confidential or Highly Confidential.",
         "severity": "Medium",
         "enabled": true,
-        "query": "PurviewDLPDemo_CL\n| where Operation == 'IRMProtectionRemoved'\n| where SensitivityLabel has_any ('Confidential', 'Highly Confidential')\n| summarize RemovalCount = count(), Files = make_set(FileName), Workloads = make_set(Workload), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId\n| where RemovalCount >= 2",
+        "query": "PurviewDLPDemo_CL\n| where Operation == 'IRMProtectionRemoved'\n| where SensitivityLabel has_any ('Confidential', 'Highly Confidential')\n| summarize RemovalCount = count(), Files = make_set(FileName), Workloads = make_set(Workload), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated), TopFileName = take_any(FileName), TopFilePath = take_any(FilePath), TopClientIP = take_any(ClientIP), TopLabel = take_any(SensitivityLabel) by UserId\n| where RemovalCount >= 2",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -1823,6 +1868,28 @@
                 "columnName": "UserId"
               }
             ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopClientIP"
+              }
+            ]
+          },
+          {
+            "entityType": "File",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopFileName"
+              },
+              {
+                "identifier": "Directory",
+                "columnName": "TopFilePath"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -1840,8 +1907,7 @@
           }
         },
         "customDetails": {
-          "RemovalCount": "RemovalCount",
-          "Files": "Files"
+          "SensitivityLabel": "TopLabel"
         }
       }
     },
@@ -1855,7 +1921,7 @@
         "description": "Detects a high volume of sensitive file downloads from a single user/IP, indicating potential mass data exfiltration.",
         "severity": "High",
         "enabled": true,
-        "query": "PurviewDLPDemo_CL\n| where Operation == 'FileDownloaded'\n| summarize DownloadCount = count(), Files = make_set(FileName), TotalSensitiveItems = sum(SensitiveInfoCount), Workloads = make_set(Workload), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated) by UserId, ClientIP\n| where DownloadCount >= 5\n| extend Duration = LastEvent - FirstEvent",
+        "query": "PurviewDLPDemo_CL\n| where Operation == 'FileDownloaded'\n| summarize DownloadCount = count(), Files = make_set(FileName), TotalSensitiveItems = sum(SensitiveInfoCount), Workloads = make_set(Workload), FirstEvent = min(TimeGenerated), LastEvent = max(TimeGenerated), TopFileName = take_any(FileName), TopFilePath = take_any(FilePath), TopSensitiveType = take_any(SensitiveInfoType) by UserId, ClientIP\n| where DownloadCount >= 5\n| extend Duration = LastEvent - FirstEvent",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -1887,6 +1953,19 @@
                 "columnName": "ClientIP"
               }
             ]
+          },
+          {
+            "entityType": "File",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "TopFileName"
+              },
+              {
+                "identifier": "Directory",
+                "columnName": "TopFilePath"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -1897,16 +1976,15 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
-              "Account"
+              "Account",
+              "IP"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
           }
         },
         "customDetails": {
-          "DownloadCount": "DownloadCount",
-          "TotalSensitiveItems": "TotalSensitiveItems",
-          "Duration": "Duration"
+          "SensitiveInfoType": "TopSensitiveType"
         }
       }
     },
