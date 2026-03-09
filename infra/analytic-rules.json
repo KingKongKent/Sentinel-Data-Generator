@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -1942,6 +1942,15 @@
                 "columnName": "SenderIPAddress"
               }
             ]
+          },
+          {
+            "entityType": "Mailbox",
+            "fieldMappings": [
+              {
+                "identifier": "MailboxPrimaryAddress",
+                "columnName": "SenderFromAddress"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -1952,7 +1961,8 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
-              "IP"
+              "IP",
+              "Mailbox"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
@@ -1976,7 +1986,7 @@
         "description": "Detects users who clicked on URLs in emails that were flagged as phishing by URL detonation, indicating potential credential compromise.",
         "severity": "High",
         "enabled": true,
-        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| where UserAction == 'Clicked'\n| summarize ClickCount = count(), Senders = make_set(SenderFromAddress), Subjects = make_set(Subject), ClickedUrls = make_set(Urls), FirstClick = min(TimeGenerated), LastClick = max(TimeGenerated) by RecipientEmailAddress\n| where ClickCount >= 1",
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| where UserAction == 'Clicked'\n| extend ClickedUrl = tostring(parse_json(Urls)[0])\n| summarize ClickCount = count(), Senders = make_set(SenderFromAddress), Subjects = make_set(Subject), ClickedUrls = make_set(Urls), TopSenderIP = take_any(SenderIPAddress), TopUrl = take_any(ClickedUrl), FirstClick = min(TimeGenerated), LastClick = max(TimeGenerated) by RecipientEmailAddress\n| where ClickCount >= 1",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -1997,6 +2007,24 @@
               {
                 "identifier": "FullName",
                 "columnName": "RecipientEmailAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopSenderIP"
+              }
+            ]
+          },
+          {
+            "entityType": "URL",
+            "fieldMappings": [
+              {
+                "identifier": "Url",
+                "columnName": "TopUrl"
               }
             ]
           }
@@ -2032,7 +2060,7 @@
         "description": "Tracks emails reported as phishing by users. A high volume of reports may indicate an active phishing campaign that bypassed automated detection.",
         "severity": "Medium",
         "enabled": true,
-        "query": "DefenderOfficeDemo_CL\n| where DetectionMethod == 'UserReported'\n| where UserAction == 'ReportedAsPhish'\n| summarize ReportCount = count(), Reporters = make_set(RecipientEmailAddress), ReporterCount = dcount(RecipientEmailAddress), Senders = make_set(SenderFromAddress), ThreatTypes = make_set(ThreatType), ConfirmedPhish = countif(ThreatType == 'Phish'), FirstReport = min(TimeGenerated), LastReport = max(TimeGenerated) by SenderFromAddress\n| where ReportCount >= 2",
+        "query": "DefenderOfficeDemo_CL\n| where DetectionMethod == 'UserReported'\n| where UserAction == 'ReportedAsPhish'\n| summarize ReportCount = count(), Reporters = make_set(RecipientEmailAddress), ReporterCount = dcount(RecipientEmailAddress), Senders = make_set(SenderFromAddress), ThreatTypes = make_set(ThreatType), ConfirmedPhish = countif(ThreatType == 'Phish'), TopReporter = take_any(RecipientEmailAddress), TopSenderIP = take_any(SenderIPAddress), FirstReport = min(TimeGenerated), LastReport = max(TimeGenerated) by SenderFromAddress\n| where ReportCount >= 2",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -2052,6 +2080,24 @@
               {
                 "identifier": "MailboxPrimaryAddress",
                 "columnName": "SenderFromAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopSenderIP"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "TopReporter"
               }
             ]
           }
@@ -2087,7 +2133,7 @@
         "description": "Detects emails with malicious attachments blocked by Safe Attachments detonation, potentially targeting specific users with custom malware.",
         "severity": "High",
         "enabled": true,
-        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Malware'\n| where DetectionMethod == 'SafeAttachments'\n| summarize MalwareCount = count(), Targets = make_set(RecipientEmailAddress), TargetCount = dcount(RecipientEmailAddress), Subjects = make_set(Subject), SenderIPs = make_set(SenderIPAddress), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress\n| where MalwareCount >= 1",
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Malware'\n| where DetectionMethod == 'SafeAttachments'\n| summarize MalwareCount = count(), Targets = make_set(RecipientEmailAddress), TargetCount = dcount(RecipientEmailAddress), Subjects = make_set(Subject), SenderIPs = make_set(SenderIPAddress), TopSenderIP = take_any(SenderIPAddress), TopTarget = take_any(RecipientEmailAddress), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress\n| where MalwareCount >= 1",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -2108,6 +2154,24 @@
               {
                 "identifier": "MailboxPrimaryAddress",
                 "columnName": "SenderFromAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "TopSenderIP"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "TopTarget"
               }
             ]
           }
@@ -2143,7 +2207,7 @@
         "description": "Detects phishing emails that were delivered to the Inbox rather than blocked or quarantined, indicating a detection gap that requires remediation.",
         "severity": "High",
         "enabled": true,
-        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| where DeliveryAction == 'Delivered' and DeliveryLocation == 'Inbox'\n| summarize DeliveredCount = count(), Recipients = make_set(RecipientEmailAddress), RecipientCount = dcount(RecipientEmailAddress), Subjects = make_set(Subject), Methods = make_set(DetectionMethod), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress, SenderIPAddress\n| where DeliveredCount >= 1",
+        "query": "DefenderOfficeDemo_CL\n| where ThreatType == 'Phish'\n| where DeliveryAction == 'Delivered' and DeliveryLocation == 'Inbox'\n| summarize DeliveredCount = count(), Recipients = make_set(RecipientEmailAddress), RecipientCount = dcount(RecipientEmailAddress), Subjects = make_set(Subject), Methods = make_set(DetectionMethod), TopRecipient = take_any(RecipientEmailAddress), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by SenderFromAddress, SenderIPAddress\n| where DeliveredCount >= 1",
         "queryFrequency": "PT6H",
         "queryPeriod": "PT7H",
         "triggerOperator": "GreaterThan",
@@ -2174,6 +2238,15 @@
                 "columnName": "SenderFromAddress"
               }
             ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "TopRecipient"
+              }
+            ]
           }
         ],
         "incidentConfiguration": {
@@ -2184,7 +2257,8 @@
             "lookbackDuration": "PT24H",
             "matchingMethod": "Selected",
             "groupByEntities": [
-              "IP"
+              "IP",
+              "Mailbox"
             ],
             "groupByAlertDetails": [],
             "groupByCustomDetails": []
