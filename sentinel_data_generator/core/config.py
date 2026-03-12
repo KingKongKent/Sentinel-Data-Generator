@@ -67,7 +67,7 @@ class ScenarioConfig(BaseModel):
     """A single scenario definition."""
 
     name: str = Field(..., description="Scenario name")
-    log_type: str = Field(..., description="Log type: security_event | signin_logs | syslog | common_security_log")
+    log_type: str = Field(..., description="Log type: security_event | common_security_log_native | signin_logs | syslog | aws_cloudtrail | gcp_audit_logs | purview_dlp | defender_office")
     description: str = Field("", description="Human-readable description")
     stream_name: str | None = Field(None, description="Override stream name for this scenario")
     parameters: dict[str, Any] = Field(default_factory=dict, description="Generator-specific parameters")

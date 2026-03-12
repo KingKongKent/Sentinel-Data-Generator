@@ -60,16 +60,25 @@ This is a **Python CLI tool** that generates realistic demo/test log data for **
 - Log schemas must match the **Data Collection Rule (DCR)** stream schema exactly.
 - Timestamps must be in **ISO 8601 UTC** format (`datetime.datetime.now(datetime.timezone.utc).isoformat()`).
 - Reuse the `LogsIngestionClient` instance — do not create a new client per batch (singleton pattern in `LogAnalyticsOutput`).
-- The Bicep IaC template (`infra/main.bicep`) defines nine custom tables and their DCR streams:
-  - `Custom-SecurityEventDemo_CL`
-  - `Custom-SigninLogDemo_CL`
-  - `Custom-SyslogDemo_CL`
-  - `Custom-CommonSecurityLogDemo_CL`
-  - `Custom-BruteForceDemo_CL`
-  - `Custom-AWSCloudTrailDemo_CL`
-  - `Custom-GCPAuditLogsDemo_CL`
-  - `Custom-PurviewDLPDemo_CL`
-  - `Custom-DefenderOfficeDemo_CL`
+- The Bicep IaC template (`infra/main.bicep`) defines nine custom tables and their DCR streams.
+- When calling the Logs Ingestion API you POST to the **input** stream name — this is what `LOG_TYPE_STREAM_MAP` in `core/config.py` stores. For native Sentinel tables the DCR internally routes to a different output stream; for custom `_CL` tables the input and output stream name are the same.
+- **CRITICAL — Do not confuse `common_security_log` (custom demo table) with `common_security_log_native` (native `CommonSecurityLog` table).** Always check the `log_type` value and the table it targets before generating or sending data.
+- `BruteForceDemo_CL` is **not** populated by the main data generator. It is populated exclusively by the standalone `brute-force-demo/` web app (Azure Function). There is no `brute_force` log_type in `GENERATOR_REGISTRY` or `LOG_TYPE_STREAM_MAP`.
+
+#### Full `log_type` → Stream → Table mapping
+
+| `log_type` (config) | DCR input stream (API / `LOG_TYPE_STREAM_MAP`) | DCR output stream | Sentinel table | Table type |
+|---|---|---|---|---|
+| `security_event` | `Custom-SecurityEventDemo_CL` | `Custom-SecurityEventDemo_CL` | `SecurityEventDemo_CL` | Custom |
+| `signin_logs` | `Custom-SigninLogDemo_CL` | `Custom-SigninLogDemo_CL` | `SigninLogDemo_CL` | Custom |
+| `syslog` | `Custom-SyslogDemo_CL` | `Custom-SyslogDemo_CL` | `SyslogDemo_CL` | Custom |
+| `common_security_log` | `Custom-CommonSecurityLogDemo_CL` | `Custom-CommonSecurityLogDemo_CL` | `CommonSecurityLogDemo_CL` | Custom |
+| `aws_cloudtrail` | `Custom-AWSCloudTrailDemo_CL` | `Custom-AWSCloudTrailDemo_CL` | `AWSCloudTrailDemo_CL` | Custom |
+| `gcp_audit_logs` | `Custom-GCPAuditLogsDemo_CL` | `Custom-GCPAuditLogsDemo_CL` | `GCPAuditLogsDemo_CL` | Custom |
+| `purview_dlp` | `Custom-PurviewDLPDemo_CL` | `Custom-PurviewDLPDemo_CL` | `PurviewDLPDemo_CL` | Custom |
+| `defender_office` | `Custom-DefenderOfficeDemo_CL` | `Custom-DefenderOfficeDemo_CL` | `DefenderOfficeDemo_CL` | Custom |
+| `common_security_log_native` | `Custom-CommonSecurityLogNative` | `Microsoft-CommonSecurityLog` | `CommonSecurityLog` | **Native** |
+| `syslog_native` | `Custom-SyslogNative` | `Microsoft-Syslog` | `Syslog` | **Native** |
 
 ### Data Generation
 - Each generator must produce data conforming to the target Sentinel table schema.

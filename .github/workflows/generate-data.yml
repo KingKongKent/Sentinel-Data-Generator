@@ -1,9 +1,9 @@
 name: Generate Sentinel Demo Data
 
 on:
-  # Run on a schedule (default: every 6 hours)
+  # Run on a schedule (default: every 24 hours)
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 0 * * *'
   
   # Allow manual trigger from GitHub UI
   workflow_dispatch:
@@ -95,8 +95,8 @@ jobs:
           echo "| **CommonSecurityLog** (native) | firewall_traffic, ids_intrusion_detection, threat_intel_matches, ubiquiti_firewall_traffic, firewall_deny_scan, ubiquiti_port_scan, ubiquiti_ids_vpn |" >> $GITHUB_STEP_SUMMARY
           echo "| **SigninLogDemo_CL** | suspicious_signins, brute_force_aad, credential_stuffing |" >> $GITHUB_STEP_SUMMARY
           echo "| **SyslogDemo_CL** | ssh_brute_force, linux_sudo_abuse, service_anomalies |" >> $GITHUB_STEP_SUMMARY
-          echo "| **AWSCloudTrailDemo_CL** | aws_iam_credential_abuse, aws_s3_exfiltration, aws_security_tampering, aws_compute_abuse, aws_console_brute_force |" >> $GITHUB_STEP_SUMMARY
-          echo "| **GCPAuditLogsDemo_CL** | gcp_iam_policy_changes, gcp_data_exfiltration, gcp_security_config_tampering, gcp_compute_abuse, gcp_brute_force_auth |" >> $GITHUB_STEP_SUMMARY
+          echo "| **AWSCloudTrailDemo_CL** | aws_iam_credential_abuse, aws_s3_exfiltration, aws_security_tampering, aws_compute_abuse, aws_brute_force_console |" >> $GITHUB_STEP_SUMMARY
+          echo "| **GCPAuditLogsDemo_CL** | gcp_iam_abuse, gcp_data_exfiltration, gcp_security_tampering, gcp_compute_abuse, gcp_brute_force_auth |" >> $GITHUB_STEP_SUMMARY
           echo "| **PurviewDLPDemo_CL** | purview_dlp_policy_violation, purview_sensitivity_label_downgrade, purview_external_sharing, purview_bulk_download, purview_irm_protection_removed |" >> $GITHUB_STEP_SUMMARY
           echo "| **DefenderOfficeDemo_CL** | defender_phishing_detected, defender_malicious_url_click, defender_user_reported_phish, defender_bulk_phishing_campaign, defender_safe_attachment_block |" >> $GITHUB_STEP_SUMMARY
 

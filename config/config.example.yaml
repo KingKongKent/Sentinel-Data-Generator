@@ -29,8 +29,8 @@ generation:
 
 # Scenarios to simulate
 # Each scenario maps to a registered generator via log_type.
-# Supported log_type values: security_event
-# Coming soon: signin_logs, syslog, common_security_log
+# Supported log_type values: security_event, common_security_log_native, signin_logs,
+#   syslog, aws_cloudtrail, gcp_audit_logs, purview_dlp, defender_office
 scenarios:
   - name: brute_force_login
     log_type: security_event

@@ -416,7 +416,7 @@ Generates AWS CloudTrail audit log events for the `AWSCloudTrailDemo_CL` custom 
 | `aws_s3_exfiltration` | Listing/getting objects from S3, disabling bucket encryption |
 | `aws_security_tampering` | Disabling CloudTrail, deleting flow logs, opening security groups |
 | `aws_compute_abuse` | Launching large EC2 instances, crypto-mining patterns |
-| `aws_console_brute_force` | Multiple failed ConsoleLogin attempts |
+| `aws_brute_force_console` | Multiple failed ConsoleLogin attempts |
 
 **Scenario parameters:**
 
@@ -435,9 +435,9 @@ Generates GCP Audit Log events for the `GCPAuditLogsDemo_CL` custom table. Simul
 
 | Scenario | Description |
 |----------|-------------|
-| `gcp_iam_policy_changes` | Setting IAM policies, creating service accounts, adding role bindings |
+| `gcp_iam_abuse` | Setting IAM policies, creating service accounts, adding role bindings |
 | `gcp_data_exfiltration` | Accessing BigQuery datasets, copying Cloud Storage objects |
-| `gcp_security_config_tampering` | Disabling audit logging, modifying firewall rules |
+| `gcp_security_tampering` | Disabling audit logging, modifying firewall rules |
 | `gcp_compute_abuse` | Creating large VM instances, crypto-mining patterns |
 | `gcp_brute_force_auth` | Multiple failed authentication attempts |
 
