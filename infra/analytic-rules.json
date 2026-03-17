@@ -71,7 +71,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -140,7 +140,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -205,7 +205,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -275,7 +275,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -352,7 +352,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP",
@@ -421,7 +421,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -498,7 +498,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -575,7 +575,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -662,7 +662,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -737,7 +737,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -803,7 +803,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Host",
@@ -870,7 +870,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -938,7 +938,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -1006,7 +1006,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -1071,7 +1071,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT1H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP",
@@ -1139,7 +1139,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1206,7 +1206,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1272,7 +1272,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1330,7 +1330,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -1397,7 +1397,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1464,7 +1464,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1530,7 +1530,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1588,7 +1588,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP"
@@ -1668,7 +1668,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1745,7 +1745,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account"
@@ -1820,7 +1820,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -1897,7 +1897,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account"
@@ -1973,7 +1973,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account",
@@ -2036,7 +2036,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP",
@@ -2112,7 +2112,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Account"
@@ -2185,7 +2185,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Mailbox"
@@ -2259,7 +2259,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "Mailbox"
@@ -2332,7 +2332,7 @@
           "groupingConfiguration": {
             "enabled": true,
             "reopenClosedIncident": false,
-            "lookbackDuration": "PT24H",
+            "lookbackDuration": "PT12H",
             "matchingMethod": "Selected",
             "groupByEntities": [
               "IP",
